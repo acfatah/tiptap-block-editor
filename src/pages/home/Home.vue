@@ -1,7 +1,13 @@
+<script setup>
+import { ref } from 'vue'
+
+import Tiptap from '@/components/Tiptap.vue'
+
+const value = ref('<p>I\'m running Tiptap with Vue.js. 🎉</p>')
+</script>
+
 <template>
-  <main class="flex min-h-screen flex-1 flex-col">
-    <div class="m-auto">
-      Let's begin!
-    </div>
+  <main class="mx-auto mt-16 flex min-h-screen max-w-lg flex-1 flex-col">
+    <Tiptap v-model="value" />
   </main>
 </template>
