@@ -1,0 +1,253 @@
+import type { Editor } from '@tiptap/vue-3'
+import type { Ref } from 'vue'
+
+import { ref } from 'vue'
+
+interface UseTableEdgeControlsOptions {
+  editor: Ref<Editor | null>
+  container: Ref<HTMLElement | null>
+}
+
+export function useTableEdgeControls({ editor, container }: UseTableEdgeControlsOptions) {
+  const showAddColumnButton = ref(false)
+  const showAddRowButton = ref(false)
+  const addColumnButtonStyle = ref<Record<string, string>>({})
+  const addRowButtonStyle = ref<Record<string, string>>({})
+  const addColumnRailStyle = ref<Record<string, string>>({})
+  const addRowRailStyle = ref<Record<string, string>>({})
+  const tableEdgeCellPos = ref<number | null>(null)
+  const lastTableCellElement = ref<HTMLElement | null>(null)
+
+  function resetTableEdgeButtons() {
+    showAddColumnButton.value = false
+    showAddRowButton.value = false
+    tableEdgeCellPos.value = null
+    addColumnRailStyle.value = {}
+    addRowRailStyle.value = {}
+    lastTableCellElement.value = null
+  }
+
+  function updateTableEdgeButtons(target: EventTarget | null) {
+    const currentEditor = editor.value
+    const containerElement = container.value
+
+    if (!currentEditor || !containerElement || !(target instanceof HTMLElement)) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    if (target.closest('.table-edge-button') || target.closest('.table-edge-rail')) {
+      return
+    }
+
+    const proseMirrorRoot = target.closest('.ProseMirror')
+    if (!proseMirrorRoot) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    const cellElement = target.closest('td, th') as HTMLTableCellElement | null
+    if (!cellElement) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    lastTableCellElement.value = cellElement
+
+    const rowElement = cellElement.parentElement as HTMLTableRowElement | null
+    const tableElement = cellElement.closest('table') as HTMLTableElement | null
+
+    if (!rowElement || !tableElement) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    const rowIndex = Array.from(tableElement.rows).indexOf(rowElement)
+    const colIndex = Array.from(rowElement.cells).indexOf(cellElement)
+
+    if (rowIndex === -1 || colIndex === -1) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    const isLastRow = rowIndex === tableElement.rows.length - 1
+    const isLastColumn = colIndex === rowElement.cells.length - 1
+
+    if (!isLastRow && !isLastColumn) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    try {
+      tableEdgeCellPos.value = currentEditor.view.posAtDOM(cellElement, 0)
+    }
+    catch {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    const tableRect = tableElement.getBoundingClientRect()
+    const containerRect = containerElement.getBoundingClientRect()
+    const edgeGap = 6
+    const edgeButtonSize = 1
+    const edgeRailSize = 4
+
+    addColumnButtonStyle.value = {
+      left: `${tableRect.right - containerRect.left + edgeGap}px`,
+      top: `${tableRect.top - containerRect.top}px`,
+      height: `${tableRect.height}px`,
+      width: `${edgeButtonSize}rem`,
+    }
+
+    addRowButtonStyle.value = {
+      left: `${tableRect.left - containerRect.left}px`,
+      top: `${tableRect.bottom - containerRect.top + edgeGap}px`,
+      width: `${tableRect.width}px`,
+      height: `${edgeButtonSize}rem`,
+    }
+
+    addColumnRailStyle.value = {
+      left: `${tableRect.right - containerRect.left}px`,
+      top: `${tableRect.top - containerRect.top}px`,
+      height: `${tableRect.height}px`,
+      width: `${edgeRailSize}rem`,
+    }
+
+    addRowRailStyle.value = {
+      left: `${tableRect.left - containerRect.left}px`,
+      top: `${tableRect.bottom - containerRect.top}px`,
+      width: `${tableRect.width}px`,
+      height: `${edgeRailSize}rem`,
+    }
+
+    showAddColumnButton.value = isLastColumn
+    showAddRowButton.value = isLastRow
+  }
+
+  function updateTableEdgeButtonsForTable(tableElement: HTMLTableElement | null) {
+    const currentEditor = editor.value
+    const containerElement = container.value
+
+    if (!currentEditor || !containerElement || !tableElement) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    const lastRow = tableElement.rows[tableElement.rows.length - 1]
+    if (!lastRow) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    const lastCell = lastRow.cells[lastRow.cells.length - 1]
+    if (!lastCell) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    lastTableCellElement.value = lastCell
+
+    try {
+      tableEdgeCellPos.value = currentEditor.view.posAtDOM(lastCell, 0)
+    }
+    catch {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    const tableRect = tableElement.getBoundingClientRect()
+    const containerRect = containerElement.getBoundingClientRect()
+    const edgeGap = 6
+    const edgeButtonSize = 1
+    const edgeRailSize = 4
+
+    addColumnButtonStyle.value = {
+      left: `${tableRect.right - containerRect.left + edgeGap}px`,
+      top: `${tableRect.top - containerRect.top}px`,
+      height: `${tableRect.height}px`,
+      width: `${edgeButtonSize}rem`,
+    }
+
+    addRowButtonStyle.value = {
+      left: `${tableRect.left - containerRect.left}px`,
+      top: `${tableRect.bottom - containerRect.top + edgeGap}px`,
+      width: `${tableRect.width}px`,
+      height: `${edgeButtonSize}rem`,
+    }
+
+    addColumnRailStyle.value = {
+      left: `${tableRect.right - containerRect.left}px`,
+      top: `${tableRect.top - containerRect.top}px`,
+      height: `${tableRect.height}px`,
+      width: `${edgeRailSize}rem`,
+    }
+
+    addRowRailStyle.value = {
+      left: `${tableRect.left - containerRect.left}px`,
+      top: `${tableRect.bottom - containerRect.top}px`,
+      width: `${tableRect.width}px`,
+      height: `${edgeRailSize}rem`,
+    }
+
+    showAddColumnButton.value = true
+    showAddRowButton.value = true
+  }
+
+  function onBlockEditorMouseMove(event: MouseEvent) {
+    updateTableEdgeButtons(event.target)
+  }
+
+  function onAddColumnFromEdge() {
+    const currentEditor = editor.value
+    const cellPos = tableEdgeCellPos.value
+
+    if (!currentEditor || cellPos === null) {
+      return
+    }
+
+    currentEditor.chain().focus().setTextSelection(cellPos + 1).addColumnAfter().run()
+
+    requestAnimationFrame(() => {
+      updateTableEdgeButtonsForTable(lastTableCellElement.value?.closest('table') ?? null)
+    })
+  }
+
+  function onAddRowFromEdge() {
+    const currentEditor = editor.value
+    const cellPos = tableEdgeCellPos.value
+
+    if (!currentEditor || cellPos === null) {
+      return
+    }
+
+    currentEditor.chain().focus().setTextSelection(cellPos + 1).addRowAfter().run()
+
+    requestAnimationFrame(() => {
+      updateTableEdgeButtonsForTable(lastTableCellElement.value?.closest('table') ?? null)
+    })
+  }
+
+  return {
+    showAddColumnButton,
+    showAddRowButton,
+    addColumnButtonStyle,
+    addRowButtonStyle,
+    addColumnRailStyle,
+    addRowRailStyle,
+    onBlockEditorMouseMove,
+    resetTableEdgeButtons,
+    onAddColumnFromEdge,
+    onAddRowFromEdge,
+  }
+}

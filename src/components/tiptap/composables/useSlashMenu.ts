@@ -1,0 +1,169 @@
+import type { Editor } from '@tiptap/vue-3'
+import type { Ref } from 'vue'
+
+import { computed, ref } from 'vue'
+
+export type SlashRange = { from: number, to: number } | null
+export type SlashMenuSource = 'slash' | 'insert' | 'turn-into' | null
+
+type SlashMenuSourceValue = Exclude<SlashMenuSource, null>
+
+interface UseSlashMenuOptions {
+  hoveredBlockPos: Ref<number | null>
+}
+
+export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
+  const slashMenuOpen = ref(false)
+  const slashMenuPosition = ref({ x: 0, y: 0 })
+  const slashRange = ref<SlashRange>(null)
+  const slashMenuHighlightedValue = ref<string | null>(null)
+  const slashMenuSource = ref<SlashMenuSource>(null)
+  const menuTargetBlockPos = ref<number | null>(null)
+  const isTableMenuVisible = ref(false)
+  const firstSlashMenuItem = 'paragraph'
+
+  const slashMenuAnchorStyle = computed(() => ({
+    left: `${slashMenuPosition.value.x}px`,
+    top: `${slashMenuPosition.value.y}px`,
+  }))
+
+  function getSlashRange(currentEditor: Editor) {
+    if (!currentEditor.state.selection.empty) {
+      return null
+    }
+
+    const { $from } = currentEditor.state.selection
+    const textBeforeCursor = $from.parent.textBetween(0, $from.parentOffset, undefined, '\uFFFC')
+    const slashIndex = textBeforeCursor.lastIndexOf('/')
+
+    if (slashIndex === -1) {
+      return null
+    }
+
+    const commandText = textBeforeCursor.slice(slashIndex)
+    if (!/^\/[\w-]*$/.test(commandText)) {
+      return null
+    }
+
+    if (slashIndex > 0 && !/\s/.test(textBeforeCursor[slashIndex - 1])) {
+      return null
+    }
+
+    const from = $from.start() + slashIndex
+    const to = $from.pos
+
+    return { from, to }
+  }
+
+  function syncMenuState(currentEditor: Editor) {
+    isTableMenuVisible.value = currentEditor.isActive('table')
+  }
+
+  function closeMenu() {
+    slashMenuOpen.value = false
+    slashRange.value = null
+    slashMenuHighlightedValue.value = null
+    slashMenuSource.value = null
+    menuTargetBlockPos.value = null
+  }
+
+  function syncSlashMenu(currentEditor: Editor) {
+    const range = getSlashRange(currentEditor)
+
+    if (!range) {
+      if (slashMenuSource.value === 'slash') {
+        closeMenu()
+      }
+
+      return
+    }
+
+    const coords = currentEditor.view.coordsAtPos(range.to)
+    slashMenuSource.value = 'slash'
+    menuTargetBlockPos.value = null
+    slashRange.value = range
+    slashMenuPosition.value = {
+      x: coords.left,
+      y: coords.bottom + 6,
+    }
+
+    if (!slashMenuOpen.value) {
+      slashMenuHighlightedValue.value = firstSlashMenuItem
+    }
+
+    slashMenuOpen.value = true
+  }
+
+  function onSlashMenuOpenChange(open: boolean) {
+    slashMenuOpen.value = open
+
+    if (open) {
+      slashMenuHighlightedValue.value = firstSlashMenuItem
+
+      return
+    }
+
+    closeMenu()
+  }
+
+  function onSlashMenuHighlightedValueChange(value: string | null) {
+    slashMenuHighlightedValue.value = value
+  }
+
+  function getMenuLabel() {
+    if (slashMenuSource.value === 'turn-into') {
+      return 'Turn into'
+    }
+
+    return 'Insert'
+  }
+
+  function resolveBlockTargetPos(currentEditor: Editor) {
+    if (hoveredBlockPos.value !== null) {
+      return hoveredBlockPos.value
+    }
+
+    const { $from } = currentEditor.state.selection
+    if ($from.depth < 1) {
+      return null
+    }
+
+    return $from.before(1)
+  }
+
+  function openMenuFromTrigger(currentEditor: Editor, event: MouseEvent, source: SlashMenuSourceValue) {
+    const trigger = event.currentTarget
+    if (!(trigger instanceof HTMLElement)) {
+      return
+    }
+
+    const rect = trigger.getBoundingClientRect()
+    slashMenuPosition.value = {
+      x: rect.left,
+      y: rect.bottom + 6,
+    }
+    slashRange.value = null
+    menuTargetBlockPos.value = resolveBlockTargetPos(currentEditor)
+    slashMenuSource.value = source
+    slashMenuHighlightedValue.value = firstSlashMenuItem
+    slashMenuOpen.value = true
+  }
+
+  return {
+    slashMenuOpen,
+    slashMenuPosition,
+    slashMenuAnchorStyle,
+    slashRange,
+    slashMenuHighlightedValue,
+    slashMenuSource,
+    menuTargetBlockPos,
+    isTableMenuVisible,
+    syncMenuState,
+    syncSlashMenu,
+    onSlashMenuOpenChange,
+    onSlashMenuHighlightedValueChange,
+    getMenuLabel,
+    openMenuFromTrigger,
+    closeMenu,
+  }
+}
