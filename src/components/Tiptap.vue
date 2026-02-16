@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 
+import { Extension } from '@tiptap/core'
 import { DragHandle } from '@tiptap/extension-drag-handle-vue-3'
 import { Table } from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
+import { Plugin } from '@tiptap/pm/state'
+import { CellSelection, isInTable } from '@tiptap/pm/tables'
+import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { GripVertical, Pilcrow, Plus, Table2 } from 'lucide-vue-next'
@@ -57,10 +61,49 @@ type TableCommand = 'add-row-before' | 'add-row-after' | 'delete-row' | 'add-col
 type MenuCommand = BlockCommand | TableCommand
 const firstSlashMenuItem: MenuCommand = 'paragraph'
 
+const ActiveTableCell = Extension.create({
+  name: 'activeTableCell',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          decorations(state) {
+            if (!isInTable(state)) {
+              return null
+            }
+
+            if (state.selection instanceof CellSelection) {
+              return null
+            }
+
+            const $pos = state.selection.$anchorCell || state.selection.$from
+            if (!$pos) {
+              return null
+            }
+
+            try {
+              const cellNode = $pos.node(-1)
+              const cellPos = $pos.before(-1)
+
+              return DecorationSet.create(state.doc, [
+                Decoration.node(cellPos, cellPos + cellNode.nodeSize, { class: 'selectedCell' }),
+              ])
+            }
+            catch {
+              return null
+            }
+          },
+        },
+      }),
+    ]
+  },
+})
+
 const editor = useEditor({
   content: props.modelValue,
   extensions: [
     StarterKit,
+    ActiveTableCell,
     Table.configure({
       resizable: true,
     }),
@@ -211,18 +254,21 @@ function updateTableEdgeButtonsForTable(tableElement: HTMLTableElement | null) {
 
   if (!currentEditor || !container || !tableElement) {
     resetTableEdgeButtons()
+
     return
   }
 
   const lastRow = tableElement.rows[tableElement.rows.length - 1]
   if (!lastRow) {
     resetTableEdgeButtons()
+
     return
   }
 
   const lastCell = lastRow.cells[lastRow.cells.length - 1]
   if (!lastCell) {
     resetTableEdgeButtons()
+
     return
   }
 
@@ -233,6 +279,7 @@ function updateTableEdgeButtonsForTable(tableElement: HTMLTableElement | null) {
   }
   catch {
     resetTableEdgeButtons()
+
     return
   }
 
@@ -906,5 +953,11 @@ onBeforeUnmount(() => {
 
 .editor-content :deep(.ProseMirror-hideselection .ProseMirror-selectednode) {
   outline: none;
+}
+
+.editor-content :deep(.ProseMirror td.selectedCell),
+.editor-content :deep(.ProseMirror th.selectedCell) {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  box-shadow: inset 0 0 0 2px var(--primary);
 }
 </style>
