@@ -34,6 +34,7 @@ const slashMenuPosition = ref({ x: 0, y: 0 })
 const slashRange = ref<{ from: number, to: number } | null>(null)
 const slashMenuHighlightedValue = ref<string | null>(null)
 const slashMenuSource = ref<'slash' | 'insert' | 'turn-into' | null>(null)
+const menuTargetBlockPos = ref<number | null>(null)
 
 const slashMenuAnchorStyle = computed(() => ({
   left: `${slashMenuPosition.value.x}px`,
@@ -136,6 +137,7 @@ function syncSlashMenu(currentEditor: NonNullable<typeof editor.value>) {
       slashMenuOpen.value = false
       slashMenuHighlightedValue.value = null
       slashMenuSource.value = null
+      menuTargetBlockPos.value = null
     }
 
     return
@@ -143,6 +145,7 @@ function syncSlashMenu(currentEditor: NonNullable<typeof editor.value>) {
 
   const coords = currentEditor.view.coordsAtPos(range.to)
   slashMenuSource.value = 'slash'
+  menuTargetBlockPos.value = null
   slashRange.value = range
   slashMenuPosition.value = {
     x: coords.left,
@@ -169,6 +172,7 @@ function onSlashMenuOpenChange(open: boolean) {
     slashRange.value = null
     slashMenuHighlightedValue.value = null
     slashMenuSource.value = null
+    menuTargetBlockPos.value = null
   }
 }
 
@@ -191,7 +195,7 @@ function getMenuLabel() {
 }
 
 function getHoveredBlockInsertPos(currentEditor: NonNullable<typeof editor.value>) {
-  const pos = hoveredBlockPos.value
+  const pos = menuTargetBlockPos.value
 
   if (pos === null) {
     return null
@@ -203,6 +207,19 @@ function getHoveredBlockInsertPos(currentEditor: NonNullable<typeof editor.value
   }
 
   return pos + node.nodeSize
+}
+
+function resolveBlockTargetPos(currentEditor: NonNullable<typeof editor.value>) {
+  if (hoveredBlockPos.value !== null) {
+    return hoveredBlockPos.value
+  }
+
+  const { $from } = currentEditor.state.selection
+  if ($from.depth < 1) {
+    return null
+  }
+
+  return $from.before(1)
 }
 
 function onDragHandleClick(event: MouseEvent) {
@@ -222,6 +239,7 @@ function onDragHandleClick(event: MouseEvent) {
     y: rect.bottom + 6,
   }
   slashRange.value = null
+  menuTargetBlockPos.value = resolveBlockTargetPos(currentEditor)
   slashMenuSource.value = 'turn-into'
   slashMenuHighlightedValue.value = firstSlashMenuItem
   slashMenuOpen.value = true
@@ -244,6 +262,7 @@ function onAddHandleClick(event: MouseEvent) {
     y: rect.bottom + 6,
   }
   slashRange.value = null
+  menuTargetBlockPos.value = resolveBlockTargetPos(currentEditor)
   slashMenuSource.value = 'insert'
   slashMenuHighlightedValue.value = firstSlashMenuItem
   slashMenuOpen.value = true
@@ -283,7 +302,7 @@ function createTableNode() {
 
 function executeTurnIntoCommand(command: SlashCommand) {
   const currentEditor = editor.value
-  const pos = hoveredBlockPos.value
+  const pos = menuTargetBlockPos.value
 
   if (!currentEditor || pos === null) {
     return
@@ -346,6 +365,7 @@ function executeSlashCommand(command: SlashCommand) {
   slashRange.value = null
   slashMenuHighlightedValue.value = null
   slashMenuSource.value = null
+  menuTargetBlockPos.value = null
 }
 
 watch(
