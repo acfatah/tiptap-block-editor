@@ -45,6 +45,7 @@ const addRowButtonStyle = ref<Record<string, string>>({})
 const addColumnRailStyle = ref<Record<string, string>>({})
 const addRowRailStyle = ref<Record<string, string>>({})
 const tableEdgeCellPos = ref<number | null>(null)
+const lastTableCellElement = ref<HTMLElement | null>(null)
 
 const slashMenuAnchorStyle = computed(() => ({
   left: `${slashMenuPosition.value.x}px`,
@@ -97,6 +98,7 @@ function resetTableEdgeButtons() {
   tableEdgeCellPos.value = null
   addColumnRailStyle.value = {}
   addRowRailStyle.value = {}
+  lastTableCellElement.value = null
 }
 
 function updateTableEdgeButtons(target: EventTarget | null) {
@@ -126,6 +128,8 @@ function updateTableEdgeButtons(target: EventTarget | null) {
 
     return
   }
+
+  lastTableCellElement.value = cellElement
 
   const rowElement = cellElement.parentElement as HTMLTableRowElement | null
   const tableElement = cellElement.closest('table') as HTMLTableElement | null
@@ -201,6 +205,75 @@ function updateTableEdgeButtons(target: EventTarget | null) {
   showAddRowButton.value = isLastRow
 }
 
+function updateTableEdgeButtonsForTable(tableElement: HTMLTableElement | null) {
+  const currentEditor = editor.value
+  const container = blockEditorElement.value
+
+  if (!currentEditor || !container || !tableElement) {
+    resetTableEdgeButtons()
+    return
+  }
+
+  const lastRow = tableElement.rows[tableElement.rows.length - 1]
+  if (!lastRow) {
+    resetTableEdgeButtons()
+    return
+  }
+
+  const lastCell = lastRow.cells[lastRow.cells.length - 1]
+  if (!lastCell) {
+    resetTableEdgeButtons()
+    return
+  }
+
+  lastTableCellElement.value = lastCell
+
+  try {
+    tableEdgeCellPos.value = currentEditor.view.posAtDOM(lastCell, 0)
+  }
+  catch {
+    resetTableEdgeButtons()
+    return
+  }
+
+  const tableRect = tableElement.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
+  const edgeGap = 6
+  const edgeButtonSize = 1
+  const edgeRailSize = 4
+
+  addColumnButtonStyle.value = {
+    left: `${tableRect.right - containerRect.left + edgeGap}px`,
+    top: `${tableRect.top - containerRect.top}px`,
+    height: `${tableRect.height}px`,
+    width: `${edgeButtonSize}rem`,
+  }
+
+  addRowButtonStyle.value = {
+    left: `${tableRect.left - containerRect.left}px`,
+    top: `${tableRect.bottom - containerRect.top + edgeGap}px`,
+    width: `${tableRect.width}px`,
+    height: `${edgeButtonSize}rem`,
+  }
+
+  addColumnRailStyle.value = {
+    left: `${tableRect.right - containerRect.left}px`,
+    top: `${tableRect.top - containerRect.top}px`,
+    height: `${tableRect.height}px`,
+    width: `${edgeRailSize}rem`,
+  }
+
+  addRowRailStyle.value = {
+    left: `${tableRect.left - containerRect.left}px`,
+    top: `${tableRect.bottom - containerRect.top}px`,
+    width: `${tableRect.width}px`,
+    height: `${edgeRailSize}rem`,
+  }
+
+  showAddColumnButton.value = true
+  showAddRowButton.value = true
+}
+
 function onBlockEditorMouseMove(event: MouseEvent) {
   updateTableEdgeButtons(event.target)
 }
@@ -214,6 +287,10 @@ function onAddColumnFromEdge() {
   }
 
   currentEditor.chain().focus().setTextSelection(cellPos + 1).addColumnAfter().run()
+
+  requestAnimationFrame(() => {
+    updateTableEdgeButtonsForTable(lastTableCellElement.value?.closest('table') ?? null)
+  })
 }
 
 function onAddRowFromEdge() {
@@ -225,6 +302,10 @@ function onAddRowFromEdge() {
   }
 
   currentEditor.chain().focus().setTextSelection(cellPos + 1).addRowAfter().run()
+
+  requestAnimationFrame(() => {
+    updateTableEdgeButtonsForTable(lastTableCellElement.value?.closest('table') ?? null)
+  })
 }
 
 function syncMenuState(currentEditor: NonNullable<typeof editor.value>) {
