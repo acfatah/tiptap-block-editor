@@ -30,6 +30,7 @@ const hoveredBlockPos = ref<number | null>(null)
 const slashMenuOpen = ref(false)
 const slashMenuPosition = ref({ x: 0, y: 0 })
 const slashRange = ref<{ from: number, to: number } | null>(null)
+const slashMenuHighlightedValue = ref<string | null>(null)
 
 const slashMenuAnchorStyle = computed(() => ({
   left: `${slashMenuPosition.value.x}px`,
@@ -37,6 +38,7 @@ const slashMenuAnchorStyle = computed(() => ({
 }))
 
 type SlashCommand = 'paragraph' | 'table'
+const firstSlashMenuItem: SlashCommand = 'paragraph'
 
 const editor = useEditor({
   content: props.modelValue,
@@ -137,6 +139,7 @@ function syncSlashMenu(currentEditor: NonNullable<typeof editor.value>) {
   if (!range) {
     slashRange.value = null
     slashMenuOpen.value = false
+    slashMenuHighlightedValue.value = null
 
     return
   }
@@ -147,15 +150,31 @@ function syncSlashMenu(currentEditor: NonNullable<typeof editor.value>) {
     x: coords.left,
     y: coords.bottom + 6,
   }
+
+  if (!slashMenuOpen.value) {
+    slashMenuHighlightedValue.value = firstSlashMenuItem
+  }
+
   slashMenuOpen.value = true
 }
 
 function onSlashMenuOpenChange(open: boolean) {
   slashMenuOpen.value = open
 
+  if (open) {
+    slashMenuHighlightedValue.value = firstSlashMenuItem
+
+    return
+  }
+
   if (!open) {
     slashRange.value = null
+    slashMenuHighlightedValue.value = null
   }
+}
+
+function onSlashMenuHighlightedValueChange(value: string | null) {
+  slashMenuHighlightedValue.value = value
 }
 
 function onSlashMenuSelect(details: { value: string }) {
@@ -184,6 +203,7 @@ function executeSlashCommand(command: SlashCommand) {
   chain.run()
   slashMenuOpen.value = false
   slashRange.value = null
+  slashMenuHighlightedValue.value = null
 }
 
 watch(
@@ -211,7 +231,9 @@ onBeforeUnmount(() => {
 
     <DropdownMenuRoot
       :open="slashMenuOpen"
+      :highlighted-value="slashMenuHighlightedValue"
       @update:open="onSlashMenuOpenChange"
+      @update:highlighted-value="onSlashMenuHighlightedValueChange"
       @select="onSlashMenuSelect"
     >
       <DropdownMenuTrigger as-child>
