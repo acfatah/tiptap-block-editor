@@ -37,6 +37,14 @@ const slashMenuHighlightedValue = ref<string | null>(null)
 const slashMenuSource = ref<'slash' | 'insert' | 'turn-into' | null>(null)
 const menuTargetBlockPos = ref<number | null>(null)
 const isTableMenuVisible = ref(false)
+const blockEditorElement = ref<HTMLElement | null>(null)
+const showAddColumnButton = ref(false)
+const showAddRowButton = ref(false)
+const addColumnButtonStyle = ref<Record<string, string>>({})
+const addRowButtonStyle = ref<Record<string, string>>({})
+const addColumnRailStyle = ref<Record<string, string>>({})
+const addRowRailStyle = ref<Record<string, string>>({})
+const tableEdgeCellPos = ref<number | null>(null)
 
 const slashMenuAnchorStyle = computed(() => ({
   left: `${slashMenuPosition.value.x}px`,
@@ -81,6 +89,142 @@ const editor = useEditor({
 
 function onNodeChange(data: { node: ProseMirrorNode | null, pos: number }) {
   hoveredBlockPos.value = data?.node ? data.pos : null
+}
+
+function resetTableEdgeButtons() {
+  showAddColumnButton.value = false
+  showAddRowButton.value = false
+  tableEdgeCellPos.value = null
+  addColumnRailStyle.value = {}
+  addRowRailStyle.value = {}
+}
+
+function updateTableEdgeButtons(target: EventTarget | null) {
+  const currentEditor = editor.value
+  const container = blockEditorElement.value
+
+  if (!currentEditor || !container || !(target instanceof HTMLElement)) {
+    resetTableEdgeButtons()
+
+    return
+  }
+
+  if (target.closest('.table-edge-button') || target.closest('.table-edge-rail')) {
+    return
+  }
+
+  const proseMirrorRoot = target.closest('.ProseMirror')
+  if (!proseMirrorRoot) {
+    resetTableEdgeButtons()
+
+    return
+  }
+
+  const cellElement = target.closest('td, th') as HTMLTableCellElement | null
+  if (!cellElement) {
+    resetTableEdgeButtons()
+
+    return
+  }
+
+  const rowElement = cellElement.parentElement as HTMLTableRowElement | null
+  const tableElement = cellElement.closest('table') as HTMLTableElement | null
+
+  if (!rowElement || !tableElement) {
+    resetTableEdgeButtons()
+
+    return
+  }
+
+  const rowIndex = Array.from(tableElement.rows).indexOf(rowElement)
+  const colIndex = Array.from(rowElement.cells).indexOf(cellElement)
+
+  if (rowIndex === -1 || colIndex === -1) {
+    resetTableEdgeButtons()
+
+    return
+  }
+
+  const isLastRow = rowIndex === tableElement.rows.length - 1
+  const isLastColumn = colIndex === rowElement.cells.length - 1
+
+  if (!isLastRow && !isLastColumn) {
+    resetTableEdgeButtons()
+
+    return
+  }
+
+  try {
+    tableEdgeCellPos.value = currentEditor.view.posAtDOM(cellElement, 0)
+  }
+  catch {
+    resetTableEdgeButtons()
+
+    return
+  }
+
+  const tableRect = tableElement.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
+  const edgeGap = 6
+  const edgeButtonSize = 1
+  const edgeRailSize = 4
+
+  addColumnButtonStyle.value = {
+    left: `${tableRect.right - containerRect.left + edgeGap}px`,
+    top: `${tableRect.top - containerRect.top}px`,
+    height: `${tableRect.height}px`,
+    width: `${edgeButtonSize}rem`,
+  }
+
+  addRowButtonStyle.value = {
+    left: `${tableRect.left - containerRect.left}px`,
+    top: `${tableRect.bottom - containerRect.top + edgeGap}px`,
+    width: `${tableRect.width}px`,
+    height: `${edgeButtonSize}rem`,
+  }
+
+  addColumnRailStyle.value = {
+    left: `${tableRect.right - containerRect.left}px`,
+    top: `${tableRect.top - containerRect.top}px`,
+    height: `${tableRect.height}px`,
+    width: `${edgeRailSize}rem`,
+  }
+
+  addRowRailStyle.value = {
+    left: `${tableRect.left - containerRect.left}px`,
+    top: `${tableRect.bottom - containerRect.top}px`,
+    width: `${tableRect.width}px`,
+    height: `${edgeRailSize}rem`,
+  }
+
+  showAddColumnButton.value = isLastColumn
+  showAddRowButton.value = isLastRow
+}
+
+function onBlockEditorMouseMove(event: MouseEvent) {
+  updateTableEdgeButtons(event.target)
+}
+
+function onAddColumnFromEdge() {
+  const currentEditor = editor.value
+  const cellPos = tableEdgeCellPos.value
+
+  if (!currentEditor || cellPos === null) {
+    return
+  }
+
+  currentEditor.chain().focus().setTextSelection(cellPos + 1).addColumnAfter().run()
+}
+
+function onAddRowFromEdge() {
+  const currentEditor = editor.value
+  const cellPos = tableEdgeCellPos.value
+
+  if (!currentEditor || cellPos === null) {
+    return
+  }
+
+  currentEditor.chain().focus().setTextSelection(cellPos + 1).addRowAfter().run()
 }
 
 function syncMenuState(currentEditor: NonNullable<typeof editor.value>) {
@@ -442,12 +586,18 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  resetTableEdgeButtons()
   editor.value?.destroy()
 })
 </script>
 
 <template>
-  <div class="block-editor">
+  <div
+    ref="blockEditorElement"
+    class="block-editor"
+    @mousemove="onBlockEditorMouseMove"
+    @mouseleave="resetTableEdgeButtons"
+  >
     <EditorContent :editor="editor" class="editor-content" />
 
     <DropdownMenuRoot
@@ -535,6 +685,44 @@ onBeforeUnmount(() => {
         <GripVertical :size="14" />
       </button>
     </DragHandle>
+
+    <button
+      v-if="showAddColumnButton"
+      type="button"
+      class="table-edge-button table-edge-button-column"
+      :style="addColumnButtonStyle"
+      aria-label="Add column"
+      @mousedown.prevent
+      @click="onAddColumnFromEdge"
+    >
+      <Plus :size="12" />
+    </button>
+
+    <div
+      v-if="showAddColumnButton"
+      class="table-edge-rail"
+      :style="addColumnRailStyle"
+      aria-hidden="true"
+    />
+
+    <button
+      v-if="showAddRowButton"
+      type="button"
+      class="table-edge-button table-edge-button-row"
+      :style="addRowButtonStyle"
+      aria-label="Add row"
+      @mousedown.prevent
+      @click="onAddRowFromEdge"
+    >
+      <Plus :size="12" />
+    </button>
+
+    <div
+      v-if="showAddRowButton"
+      class="table-edge-rail"
+      :style="addRowRailStyle"
+      aria-hidden="true"
+    />
   </div>
 </template>
 
@@ -560,6 +748,29 @@ onBeforeUnmount(() => {
   display: flex;
   gap: var(--handle-gap);
   transform: translateX(-0.35rem);
+}
+
+.table-edge-button {
+  position: absolute;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--muted-foreground);
+}
+
+.table-edge-button:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.table-edge-rail {
+  position: absolute;
+  z-index: 25;
+  background: transparent;
 }
 
 .block-handle-button {
