@@ -5,11 +5,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import homeRoutes from '@/pages/home/routes'
 
-if (!import.meta.env.VITE_PAGE_TITLE) {
-  console.warn('VITE_PAGE_TITLE is not defined!')
-}
-
-const DEFAULT_PAGE_TITLE = import.meta.env.VITE_PAGE_TITLE || ''
+const DEFAULT_PAGE_TITLE = import.meta.env.VITE_PAGE_TITLE || 'Simple Block Editor'
 const { start: startLoading, done: doneLoading } = useNProgress()
 
 const router = createRouter({

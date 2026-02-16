@@ -13,7 +13,9 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import {
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -31,6 +33,7 @@ const slashMenuOpen = ref(false)
 const slashMenuPosition = ref({ x: 0, y: 0 })
 const slashRange = ref<{ from: number, to: number } | null>(null)
 const slashMenuHighlightedValue = ref<string | null>(null)
+const slashMenuSource = ref<'slash' | 'insert' | 'turn-into' | null>(null)
 
 const slashMenuAnchorStyle = computed(() => ({
   left: `${slashMenuPosition.value.x}px`,
@@ -74,20 +77,11 @@ function onNodeChange(data: { node: ProseMirrorNode | null, pos: number }) {
 
 function onAddBlock() {
   const currentEditor = editor.value
-  const pos = hoveredBlockPos.value
-
-  if (!currentEditor || pos === null) {
+  if (!currentEditor) {
     return
   }
 
-  const node = currentEditor.state.doc.nodeAt(pos)
-  if (!node) {
-    return
-  }
-
-  const insertPos = pos + node.nodeSize
-  currentEditor.chain().focus().insertContentAt(insertPos, { type: 'paragraph' }).run()
-  currentEditor.commands.setTextSelection(insertPos + 1)
+  currentEditor.chain().focus().run()
 }
 
 function onElementDragEnd() {
@@ -137,14 +131,18 @@ function syncSlashMenu(currentEditor: NonNullable<typeof editor.value>) {
   const range = getSlashRange()
 
   if (!range) {
-    slashRange.value = null
-    slashMenuOpen.value = false
-    slashMenuHighlightedValue.value = null
+    if (slashMenuSource.value === 'slash') {
+      slashRange.value = null
+      slashMenuOpen.value = false
+      slashMenuHighlightedValue.value = null
+      slashMenuSource.value = null
+    }
 
     return
   }
 
   const coords = currentEditor.view.coordsAtPos(range.to)
+  slashMenuSource.value = 'slash'
   slashRange.value = range
   slashMenuPosition.value = {
     x: coords.left,
@@ -170,6 +168,7 @@ function onSlashMenuOpenChange(open: boolean) {
   if (!open) {
     slashRange.value = null
     slashMenuHighlightedValue.value = null
+    slashMenuSource.value = null
   }
 }
 
@@ -183,27 +182,170 @@ function onSlashMenuSelect(details: { value: string }) {
   }
 }
 
+function getMenuLabel() {
+  if (slashMenuSource.value === 'turn-into') {
+    return 'Turn into'
+  }
+
+  return 'Insert'
+}
+
+function getHoveredBlockInsertPos(currentEditor: NonNullable<typeof editor.value>) {
+  const pos = hoveredBlockPos.value
+
+  if (pos === null) {
+    return null
+  }
+
+  const node = currentEditor.state.doc.nodeAt(pos)
+  if (!node) {
+    return null
+  }
+
+  return pos + node.nodeSize
+}
+
+function onDragHandleClick(event: MouseEvent) {
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return
+  }
+
+  const trigger = event.currentTarget
+  if (!(trigger instanceof HTMLElement)) {
+    return
+  }
+
+  const rect = trigger.getBoundingClientRect()
+  slashMenuPosition.value = {
+    x: rect.left,
+    y: rect.bottom + 6,
+  }
+  slashRange.value = null
+  slashMenuSource.value = 'turn-into'
+  slashMenuHighlightedValue.value = firstSlashMenuItem
+  slashMenuOpen.value = true
+}
+
+function onAddHandleClick(event: MouseEvent) {
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return
+  }
+
+  const trigger = event.currentTarget
+  if (!(trigger instanceof HTMLElement)) {
+    return
+  }
+
+  const rect = trigger.getBoundingClientRect()
+  slashMenuPosition.value = {
+    x: rect.left,
+    y: rect.bottom + 6,
+  }
+  slashRange.value = null
+  slashMenuSource.value = 'insert'
+  slashMenuHighlightedValue.value = firstSlashMenuItem
+  slashMenuOpen.value = true
+}
+
+function createTableNode() {
+  return {
+    type: 'table',
+    content: [
+      {
+        type: 'tableRow',
+        content: [
+          { type: 'tableHeader', content: [{ type: 'paragraph' }] },
+          { type: 'tableHeader', content: [{ type: 'paragraph' }] },
+          { type: 'tableHeader', content: [{ type: 'paragraph' }] },
+        ],
+      },
+      {
+        type: 'tableRow',
+        content: [
+          { type: 'tableCell', content: [{ type: 'paragraph' }] },
+          { type: 'tableCell', content: [{ type: 'paragraph' }] },
+          { type: 'tableCell', content: [{ type: 'paragraph' }] },
+        ],
+      },
+      {
+        type: 'tableRow',
+        content: [
+          { type: 'tableCell', content: [{ type: 'paragraph' }] },
+          { type: 'tableCell', content: [{ type: 'paragraph' }] },
+          { type: 'tableCell', content: [{ type: 'paragraph' }] },
+        ],
+      },
+    ],
+  }
+}
+
+function executeTurnIntoCommand(command: SlashCommand) {
+  const currentEditor = editor.value
+  const pos = hoveredBlockPos.value
+
+  if (!currentEditor || pos === null) {
+    return
+  }
+
+  const node = currentEditor.state.doc.nodeAt(pos)
+  if (!node) {
+    return
+  }
+
+  const from = pos
+  const to = pos + node.nodeSize
+
+  if (command === 'table') {
+    currentEditor.chain().focus().deleteRange({ from, to }).insertContentAt(from, createTableNode()).run()
+    currentEditor.commands.setTextSelection(from + 4)
+  }
+  else {
+    currentEditor.chain().focus().deleteRange({ from, to }).insertContentAt(from, { type: 'paragraph' }).run()
+    currentEditor.commands.setTextSelection(from + 1)
+  }
+}
+
 function executeSlashCommand(command: SlashCommand) {
   const currentEditor = editor.value
   const range = slashRange.value
 
-  if (!currentEditor || !range) {
+  if (!currentEditor) {
     return
   }
 
-  const chain = currentEditor.chain().focus().deleteRange(range)
+  if (slashMenuSource.value === 'turn-into') {
+    executeTurnIntoCommand(command)
+  }
+  else if (range) {
+    const chain = currentEditor.chain().focus().deleteRange(range)
 
-  if (command === 'table') {
-    chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+    if (command === 'table') {
+      chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+    }
+    else {
+      chain.setParagraph()
+    }
+
+    chain.run()
   }
   else {
-    chain.setParagraph()
+    const insertPos = getHoveredBlockInsertPos(currentEditor) ?? currentEditor.state.selection.from
+
+    if (command === 'table') {
+      currentEditor.chain().focus().setTextSelection(insertPos).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+    }
+    else {
+      currentEditor.chain().focus().insertContentAt(insertPos, { type: 'paragraph' }).run()
+      currentEditor.commands.setTextSelection(insertPos + 1)
+    }
   }
 
-  chain.run()
   slashMenuOpen.value = false
   slashRange.value = null
   slashMenuHighlightedValue.value = null
+  slashMenuSource.value = null
 }
 
 watch(
@@ -247,14 +389,17 @@ onBeforeUnmount(() => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent side="bottom" align="start" class="w-44">
-        <DropdownMenuItem value="paragraph">
-          <Pilcrow :size="14" />
-          Paragraph
-        </DropdownMenuItem>
-        <DropdownMenuItem value="table">
-          <Table2 :size="14" />
-          Table
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{{ getMenuLabel() }}</DropdownMenuLabel>
+          <DropdownMenuItem value="paragraph">
+            <Pilcrow :size="14" />
+            Paragraph
+          </DropdownMenuItem>
+          <DropdownMenuItem value="table">
+            <Table2 :size="14" />
+            Table
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenuRoot>
 
@@ -271,7 +416,7 @@ onBeforeUnmount(() => {
         class="block-handle-button"
         aria-label="Insert block"
         @mousedown.prevent
-        @click="onAddBlock"
+        @click.stop="onAddHandleClick"
       >
         <Plus :size="14" />
       </button>
@@ -281,6 +426,7 @@ onBeforeUnmount(() => {
         class="block-handle-button"
         aria-label="Drag block"
         draggable="true"
+        @click.stop="onDragHandleClick"
       >
         <GripVertical :size="14" />
       </button>
