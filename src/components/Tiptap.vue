@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRoot,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
@@ -35,14 +36,17 @@ const slashRange = ref<{ from: number, to: number } | null>(null)
 const slashMenuHighlightedValue = ref<string | null>(null)
 const slashMenuSource = ref<'slash' | 'insert' | 'turn-into' | null>(null)
 const menuTargetBlockPos = ref<number | null>(null)
+const isTableMenuVisible = ref(false)
 
 const slashMenuAnchorStyle = computed(() => ({
   left: `${slashMenuPosition.value.x}px`,
   top: `${slashMenuPosition.value.y}px`,
 }))
 
-type SlashCommand = 'paragraph' | 'table'
-const firstSlashMenuItem: SlashCommand = 'paragraph'
+type BlockCommand = 'paragraph' | 'table'
+type TableCommand = 'add-row-before' | 'add-row-after' | 'delete-row' | 'add-column-before' | 'add-column-after' | 'delete-column'
+type MenuCommand = BlockCommand | TableCommand
+const firstSlashMenuItem: MenuCommand = 'paragraph'
 
 const editor = useEditor({
   content: props.modelValue,
@@ -62,12 +66,15 @@ const editor = useEditor({
   },
   onUpdate: ({ editor }) => {
     emit('update:modelValue', editor.getHTML())
+    syncMenuState(editor)
     syncSlashMenu(editor)
   },
   onSelectionUpdate: ({ editor }) => {
+    syncMenuState(editor)
     syncSlashMenu(editor)
   },
   onCreate: ({ editor }) => {
+    syncMenuState(editor)
     syncSlashMenu(editor)
   },
 })
@@ -76,13 +83,8 @@ function onNodeChange(data: { node: ProseMirrorNode | null, pos: number }) {
   hoveredBlockPos.value = data?.node ? data.pos : null
 }
 
-function onAddBlock() {
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return
-  }
-
-  currentEditor.chain().focus().run()
+function syncMenuState(currentEditor: NonNullable<typeof editor.value>) {
+  isTableMenuVisible.value = currentEditor.isActive('table')
 }
 
 function onElementDragEnd() {
@@ -181,8 +183,17 @@ function onSlashMenuHighlightedValueChange(value: string | null) {
 }
 
 function onSlashMenuSelect(details: { value: string }) {
-  if (details.value === 'paragraph' || details.value === 'table') {
-    executeSlashCommand(details.value)
+  if (
+    details.value === 'paragraph'
+    || details.value === 'table'
+    || details.value === 'add-row-before'
+    || details.value === 'add-row-after'
+    || details.value === 'delete-row'
+    || details.value === 'add-column-before'
+    || details.value === 'add-column-after'
+    || details.value === 'delete-column'
+  ) {
+    executeMenuCommand(details.value)
   }
 }
 
@@ -228,6 +239,8 @@ function onDragHandleClick(event: MouseEvent) {
     return
   }
 
+  syncMenuState(currentEditor)
+
   const trigger = event.currentTarget
   if (!(trigger instanceof HTMLElement)) {
     return
@@ -250,6 +263,8 @@ function onAddHandleClick(event: MouseEvent) {
   if (!currentEditor) {
     return
   }
+
+  syncMenuState(currentEditor)
 
   const trigger = event.currentTarget
   if (!(trigger instanceof HTMLElement)) {
@@ -300,7 +315,7 @@ function createTableNode() {
   }
 }
 
-function executeTurnIntoCommand(command: SlashCommand) {
+function executeTurnIntoCommand(command: BlockCommand) {
   const currentEditor = editor.value
   const pos = menuTargetBlockPos.value
 
@@ -326,7 +341,35 @@ function executeTurnIntoCommand(command: SlashCommand) {
   }
 }
 
-function executeSlashCommand(command: SlashCommand) {
+function executeTableCommand(command: TableCommand) {
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return
+  }
+
+  const chain = currentEditor.chain().focus()
+
+  if (command === 'add-row-before') {
+    chain.addRowBefore().run()
+  }
+  else if (command === 'add-row-after') {
+    chain.addRowAfter().run()
+  }
+  else if (command === 'delete-row') {
+    chain.deleteRow().run()
+  }
+  else if (command === 'add-column-before') {
+    chain.addColumnBefore().run()
+  }
+  else if (command === 'add-column-after') {
+    chain.addColumnAfter().run()
+  }
+  else {
+    chain.deleteColumn().run()
+  }
+}
+
+function executeBlockCommand(command: BlockCommand) {
   const currentEditor = editor.value
   const range = slashRange.value
 
@@ -359,6 +402,22 @@ function executeSlashCommand(command: SlashCommand) {
       currentEditor.chain().focus().insertContentAt(insertPos, { type: 'paragraph' }).run()
       currentEditor.commands.setTextSelection(insertPos + 1)
     }
+  }
+}
+
+function executeMenuCommand(command: MenuCommand) {
+  if (
+    command === 'add-row-before'
+    || command === 'add-row-after'
+    || command === 'delete-row'
+    || command === 'add-column-before'
+    || command === 'add-column-after'
+    || command === 'delete-column'
+  ) {
+    executeTableCommand(command)
+  }
+  else {
+    executeBlockCommand(command)
   }
 
   slashMenuOpen.value = false
@@ -420,6 +479,31 @@ onBeforeUnmount(() => {
             Table
           </DropdownMenuItem>
         </DropdownMenuGroup>
+
+        <template v-if="isTableMenuVisible">
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Table</DropdownMenuLabel>
+            <DropdownMenuItem value="add-row-before">
+              Add Row Above
+            </DropdownMenuItem>
+            <DropdownMenuItem value="add-row-after">
+              Add Row Below
+            </DropdownMenuItem>
+            <DropdownMenuItem value="delete-row">
+              Delete Row
+            </DropdownMenuItem>
+            <DropdownMenuItem value="add-column-before">
+              Add Column Left
+            </DropdownMenuItem>
+            <DropdownMenuItem value="add-column-after">
+              Add Column Right
+            </DropdownMenuItem>
+            <DropdownMenuItem value="delete-column">
+              Delete Column
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </template>
       </DropdownMenuContent>
     </DropdownMenuRoot>
 
