@@ -2,10 +2,21 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 
 import { DragHandle } from '@tiptap/extension-drag-handle-vue-3'
+import { Table } from '@tiptap/extension-table'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+import TableRow from '@tiptap/extension-table-row'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
-import { GripVertical, Plus } from 'lucide-vue-next'
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { GripVertical, Pilcrow, Plus, Table2 } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+
+import {
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const props = defineProps<{
   modelValue: string
@@ -16,10 +27,28 @@ const emit = defineEmits<{
 }>()
 
 const hoveredBlockPos = ref<number | null>(null)
+const slashMenuOpen = ref(false)
+const slashMenuPosition = ref({ x: 0, y: 0 })
+const slashRange = ref<{ from: number, to: number } | null>(null)
+
+const slashMenuAnchorStyle = computed(() => ({
+  left: `${slashMenuPosition.value.x}px`,
+  top: `${slashMenuPosition.value.y}px`,
+}))
+
+type SlashCommand = 'paragraph' | 'table'
 
 const editor = useEditor({
   content: props.modelValue,
-  extensions: [StarterKit],
+  extensions: [
+    StarterKit,
+    Table.configure({
+      resizable: true,
+    }),
+    TableRow,
+    TableHeader,
+    TableCell,
+  ],
   editorProps: {
     attributes: {
       class: 'simple-editor',
@@ -27,6 +56,13 @@ const editor = useEditor({
   },
   onUpdate: ({ editor }) => {
     emit('update:modelValue', editor.getHTML())
+    syncSlashMenu(editor)
+  },
+  onSelectionUpdate: ({ editor }) => {
+    syncSlashMenu(editor)
+  },
+  onCreate: ({ editor }) => {
+    syncSlashMenu(editor)
   },
 })
 
@@ -65,6 +101,91 @@ function onElementDragEnd() {
   })
 }
 
+function getSlashRange() {
+  const currentEditor = editor.value
+
+  if (!currentEditor || !currentEditor.state.selection.empty) {
+    return null
+  }
+
+  const { $from } = currentEditor.state.selection
+  const textBeforeCursor = $from.parent.textBetween(0, $from.parentOffset, undefined, '\uFFFC')
+  const slashIndex = textBeforeCursor.lastIndexOf('/')
+
+  if (slashIndex === -1) {
+    return null
+  }
+
+  const commandText = textBeforeCursor.slice(slashIndex)
+  if (!/^\/[\w-]*$/.test(commandText)) {
+    return null
+  }
+
+  if (slashIndex > 0 && !/\s/.test(textBeforeCursor[slashIndex - 1])) {
+    return null
+  }
+
+  const from = $from.start() + slashIndex
+  const to = $from.pos
+
+  return { from, to }
+}
+
+function syncSlashMenu(currentEditor: NonNullable<typeof editor.value>) {
+  const range = getSlashRange()
+
+  if (!range) {
+    slashRange.value = null
+    slashMenuOpen.value = false
+
+    return
+  }
+
+  const coords = currentEditor.view.coordsAtPos(range.to)
+  slashRange.value = range
+  slashMenuPosition.value = {
+    x: coords.left,
+    y: coords.bottom + 6,
+  }
+  slashMenuOpen.value = true
+}
+
+function onSlashMenuOpenChange(open: boolean) {
+  slashMenuOpen.value = open
+
+  if (!open) {
+    slashRange.value = null
+  }
+}
+
+function onSlashMenuSelect(details: { value: string }) {
+  if (details.value === 'paragraph' || details.value === 'table') {
+    executeSlashCommand(details.value)
+  }
+}
+
+function executeSlashCommand(command: SlashCommand) {
+  const currentEditor = editor.value
+  const range = slashRange.value
+
+  if (!currentEditor || !range) {
+    return
+  }
+
+  const chain = currentEditor.chain().focus().deleteRange(range)
+
+  if (command === 'table') {
+    chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+  }
+  else {
+    chain.setParagraph()
+  }
+
+  chain.run()
+  slashMenuOpen.value = false
+  slashRange.value = null
+}
+
 watch(
   () => props.modelValue,
   (value) => {
@@ -87,6 +208,33 @@ onBeforeUnmount(() => {
 <template>
   <div class="block-editor">
     <EditorContent :editor="editor" class="editor-content" />
+
+    <DropdownMenuRoot
+      :open="slashMenuOpen"
+      @update:open="onSlashMenuOpenChange"
+      @select="onSlashMenuSelect"
+    >
+      <DropdownMenuTrigger as-child>
+        <button
+          type="button"
+          aria-hidden="true"
+          tabindex="-1"
+          class="slash-menu-anchor"
+          :style="slashMenuAnchorStyle"
+        />
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent side="bottom" align="start" class="w-44">
+        <DropdownMenuItem value="paragraph">
+          <Pilcrow :size="14" />
+          Paragraph
+        </DropdownMenuItem>
+        <DropdownMenuItem value="table">
+          <Table2 :size="14" />
+          Table
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenuRoot>
 
     <DragHandle
       v-if="editor"
@@ -126,6 +274,15 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
+.slash-menu-anchor {
+  position: fixed;
+  z-index: 30;
+  height: 1px;
+  width: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .block-handle {
   z-index: 20;
   display: flex;
@@ -157,6 +314,19 @@ onBeforeUnmount(() => {
 
 .editor-content :deep(.ProseMirror > *) {
   margin-block: 0.3rem;
+}
+
+.editor-content :deep(.ProseMirror table) {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.editor-content :deep(.ProseMirror th),
+.editor-content :deep(.ProseMirror td) {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  vertical-align: top;
 }
 
 .editor-content :deep(.ProseMirror-hideselection *::selection) {
