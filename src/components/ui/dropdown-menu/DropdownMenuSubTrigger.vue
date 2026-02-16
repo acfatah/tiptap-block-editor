@@ -34,6 +34,7 @@ useForwardExpose()
       `
         hover:bg-accent
         focus:bg-accent focus:text-accent-foreground
+        data-highlighted:bg-accent data-highlighted:text-accent-foreground
         data-inset:pl-8
         data-[state=open]:bg-accent data-[state=open]:text-accent-foreground
         [&_svg]:pointer-events-none [&_svg]:shrink-0

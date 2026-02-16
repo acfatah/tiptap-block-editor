@@ -38,6 +38,7 @@ useForwardExpose()
         outline-hidden select-none
         hover:bg-accent
         focus:bg-accent focus:text-accent-foreground
+        data-highlighted:bg-accent data-highlighted:text-accent-foreground
       `,
       `
         [&_svg]:pointer-events-none [&_svg]:shrink-0
