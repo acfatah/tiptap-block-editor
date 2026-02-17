@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Plus } from 'lucide-vue-next'
 
+import { Button } from '@/components/ui/button'
+
 interface TableEdgeControlsProps {
   showAddColumnButton: boolean
   showAddRowButton: boolean
@@ -13,27 +15,25 @@ interface TableEdgeControlsProps {
 const props = defineProps<TableEdgeControlsProps>()
 
 const emit = defineEmits<{
-  (event: 'add-column'): void
-  (event: 'add-row'): void
+  (event: 'addColumn'): void
+  (event: 'addRow'): void
 }>()
 </script>
 
 <template>
-  <button
+  <Button
     v-if="props.showAddColumnButton"
     type="button"
-    class="
-      table-edge-button absolute z-30 inline-flex items-center justify-center rounded-sm border
-      border-(--border) bg-popover text-(--muted-foreground)
-      hover:bg-(--accent) hover:text-(--accent-foreground)
-    "
+    variant="outline"
+    size="icon-sm"
+    class="table-edge-button absolute z-30 rounded-sm"
     :style="props.addColumnButtonStyle"
     aria-label="Add column"
     @mousedown.prevent
-    @click="emit('add-column')"
+    @click="emit('addColumn')"
   >
-    <Plus :size="12" />
-  </button>
+    <Plus :size="12" class="opacity-50" />
+  </Button>
 
   <div
     v-if="props.showAddColumnButton"
@@ -42,21 +42,19 @@ const emit = defineEmits<{
     aria-hidden="true"
   />
 
-  <button
+  <Button
     v-if="props.showAddRowButton"
     type="button"
-    class="
-      table-edge-button absolute z-30 inline-flex items-center justify-center rounded-sm border
-      border-(--border) bg-popover text-(--muted-foreground)
-      hover:bg-(--accent) hover:text-(--accent-foreground)
-    "
+    variant="outline"
+    size="icon-sm"
+    class="table-edge-button absolute z-30 rounded-sm"
     :style="props.addRowButtonStyle"
     aria-label="Add row"
     @mousedown.prevent
-    @click="emit('add-row')"
+    @click="emit('addRow')"
   >
-    <Plus :size="12" />
-  </button>
+    <Plus :size="12" class="opacity-50" />
+  </Button>
 
   <div
     v-if="props.showAddRowButton"
