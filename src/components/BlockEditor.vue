@@ -65,6 +65,9 @@ const editor = useEditor({
     attributes: {
       class: 'simple-editor',
     },
+    handleKeyDown: (_, event) => {
+      return onEditorKeyDown(event)
+    },
     handlePaste: (_, event) => {
       return onEditorPaste(event)
     },
@@ -125,6 +128,31 @@ function onEditorPaste(event: ClipboardEvent) {
     .focus()
     .insertContent(createTableNodeContent(parsedTable.rows, parsedTable.withHeaderRow))
     .run()
+
+  return true
+}
+
+function onEditorKeyDown(event: KeyboardEvent) {
+  const currentEditor = editor.value
+
+  if (!currentEditor || event.key !== 'Tab') {
+    return false
+  }
+
+  event.preventDefault()
+
+  if (currentEditor.isActive('table')) {
+    if (event.shiftKey) {
+      currentEditor.commands.goToPreviousCell()
+    }
+    else {
+      currentEditor.commands.goToNextCell()
+    }
+
+    return true
+  }
+
+  currentEditor.chain().focus().insertContent('\t').run()
 
   return true
 }

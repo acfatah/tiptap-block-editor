@@ -38,6 +38,50 @@ export function isMenuCommand(value: string): value is MenuCommand {
 }
 
 export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTargetBlockPos }: UseBlockCommandsOptions) {
+  function getNodeTextWithHardBreaks(node: { toJSON?: () => unknown, textContent: string }) {
+    const nodeJson = node.toJSON?.() as
+      | {
+        type?: string
+        text?: string
+        content?: unknown[]
+      }
+      | undefined
+
+    if (!nodeJson) {
+      return node.textContent
+    }
+
+    function readNodeText(currentNode: {
+      type?: string
+      text?: string
+      content?: unknown[]
+    }): string {
+      if (currentNode.type === 'text') {
+        return currentNode.text ?? ''
+      }
+
+      if (currentNode.type === 'hardBreak') {
+        return '\n'
+      }
+
+      if (!currentNode.content?.length) {
+        return ''
+      }
+
+      return currentNode.content
+        .map((childNode) => {
+          return readNodeText(childNode as {
+            type?: string
+            text?: string
+            content?: unknown[]
+          })
+        })
+        .join('')
+    }
+
+    return readNodeText(nodeJson)
+  }
+
   function getTableNodeRows(node: {
     childCount: number
     child: (index: number) => {
@@ -63,14 +107,30 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
   }
 
   function createParagraphNode(text: string) {
-    return {
-      type: 'paragraph',
-      content: text
+    const lines = text.split('\n')
+    const paragraphContent = lines.flatMap((line, lineIndex) => {
+      const lineContent = line
         ? [{
             type: 'text',
-            text,
+            text: line,
           }]
-        : [],
+        : []
+
+      if (lineIndex === lines.length - 1) {
+        return lineContent
+      }
+
+      return [
+        ...lineContent,
+        {
+          type: 'hardBreak',
+        },
+      ]
+    })
+
+    return {
+      type: 'paragraph',
+      content: paragraphContent,
     }
   }
 
@@ -91,7 +151,7 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
     const to = pos + node.nodeSize
 
     if (command === 'table') {
-      const parsedTable = parseTableText(node.textContent)
+      const parsedTable = parseTableText(getNodeTextWithHardBreaks(node))
 
       currentEditor
         .chain()

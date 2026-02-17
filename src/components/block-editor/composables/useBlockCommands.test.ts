@@ -131,6 +131,73 @@ describe('useBlockCommands turn-into conversion', () => {
 
     const payload = insertCall?.[1] as { content: any }
     expect(payload.content.type).toBe('paragraph')
-    expect(payload.content.content[0].text).toBe('H1\tH2\nv1\tv2')
+    expect(payload.content.content).toEqual([
+      {
+        type: 'text',
+        text: 'H1\tH2',
+      },
+      {
+        type: 'hardBreak',
+      },
+      {
+        type: 'text',
+        text: 'v1\tv2',
+      },
+    ])
+  })
+
+  it('converts paragraph hardBreak lines into multiple table rows', () => {
+    const calls: Array<[string, unknown?]> = []
+    const node = {
+      nodeSize: 40,
+      textContent: '| Name | Age || --- | --- || Ari | 12 |',
+      type: { name: 'paragraph' },
+      toJSON: () => {
+        return {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: '| Name | Age |',
+            },
+            {
+              type: 'hardBreak',
+            },
+            {
+              type: 'text',
+              text: '| --- | --- |',
+            },
+            {
+              type: 'hardBreak',
+            },
+            {
+              type: 'text',
+              text: '| Ari | 12 |',
+            },
+          ],
+        }
+      },
+    }
+
+    const editor = ref(createEditor(node, calls) as any)
+    const slashRange = ref(null)
+    const slashMenuSource = ref('turn-into' as const)
+    const menuTargetBlockPos = ref(8)
+
+    const { executeMenuCommand } = useBlockCommands({
+      editor,
+      slashRange,
+      slashMenuSource,
+      menuTargetBlockPos,
+    })
+
+    executeMenuCommand('table')
+
+    const insertCall = calls.find(([name]) => name === 'insertContentAt')
+    expect(insertCall).toBeDefined()
+
+    const payload = insertCall?.[1] as { content: any }
+    expect(payload.content.content[0].content[0].content[0].content[0].text).toBe('Name')
+    expect(payload.content.content[1].content[1].content[0].content[0].text).toBe('12')
   })
 })
