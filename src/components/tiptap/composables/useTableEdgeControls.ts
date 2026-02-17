@@ -30,25 +30,26 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
   function updateTableEdgeButtons(target: EventTarget | null) {
     const currentEditor = editor.value
     const containerElement = container.value
+    const targetElement = target instanceof Element ? target : null
 
-    if (!currentEditor || !containerElement || !(target instanceof HTMLElement)) {
+    if (!currentEditor || !containerElement || !targetElement) {
       resetTableEdgeButtons()
 
       return
     }
 
-    if (target.closest('.table-edge-button') || target.closest('.table-edge-rail')) {
+    if (targetElement.closest('.table-edge-button') || targetElement.closest('.table-edge-rail')) {
       return
     }
 
-    const proseMirrorRoot = target.closest('.ProseMirror')
+    const proseMirrorRoot = targetElement.closest('.ProseMirror')
     if (!proseMirrorRoot) {
       resetTableEdgeButtons()
 
       return
     }
 
-    const cellElement = target.closest('td, th') as HTMLTableCellElement | null
+    const cellElement = targetElement.closest('td, th') as HTMLTableCellElement | null
     if (!cellElement) {
       resetTableEdgeButtons()
 
