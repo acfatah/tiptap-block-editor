@@ -1,6 +1,8 @@
 import type { Editor } from '@tiptap/vue-3'
 import type { Ref } from 'vue'
 
+import { isInTable } from '@tiptap/pm/tables'
+
 import type { SlashMenuSource, SlashRange } from './useSlashMenu'
 
 import { createTableNodeContent, parseTableText, rowsToPlainText } from './markdownTableParser'
@@ -183,6 +185,10 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
   function executeTableCommand(command: TableCommand) {
     const currentEditor = editor.value
     if (!currentEditor) {
+      return
+    }
+
+    if (!isInTable(currentEditor.state)) {
       return
     }
 

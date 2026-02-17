@@ -38,6 +38,7 @@ const {
   slashMenuSource,
   menuTargetBlockPos,
   isTableMenuVisible,
+  isTableActionsEnabled,
   syncMenuState,
   syncSlashMenu,
   onSlashMenuOpenChange,
@@ -258,6 +259,7 @@ onBeforeUnmount(() => {
       :anchor-style="slashMenuAnchorStyle"
       :menu-source="slashMenuSource"
       :is-table-menu-visible="isTableMenuVisible"
+      :is-table-actions-enabled="isTableActionsEnabled"
       :menu-label="getMenuLabel()"
       @update:open="onSlashMenuOpenChange"
       @update:highlighted-value="onSlashMenuHighlightedValueChange"

@@ -1,6 +1,7 @@
 import type { Editor } from '@tiptap/vue-3'
 import type { Ref } from 'vue'
 
+import { isInTable } from '@tiptap/pm/tables'
 import { ref } from 'vue'
 
 interface UseTableEdgeControlsOptions {
@@ -66,6 +67,12 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
     const targetElement = target instanceof Element ? target : null
 
     if (!currentEditor || !containerElement || !targetElement) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
+    if (!isInTable(currentEditor.state)) {
       resetTableEdgeButtons()
 
       return
@@ -150,6 +157,12 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
       return
     }
 
+    if (!isInTable(currentEditor.state)) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
     const lastRow = tableElement.rows[tableElement.rows.length - 1]
     if (!lastRow) {
       resetTableEdgeButtons()
@@ -200,6 +213,10 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
       return
     }
 
+    if (!isInTable(currentEditor.state)) {
+      return
+    }
+
     currentEditor.chain().focus().setTextSelection(cellPos + 1).addColumnAfter().run()
 
     requestAnimationFrame(() => {
@@ -212,6 +229,10 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
     const cellPos = tableEdgeCellPos.value
 
     if (!currentEditor || cellPos === null) {
+      return
+    }
+
+    if (!isInTable(currentEditor.state)) {
       return
     }
 

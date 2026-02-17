@@ -1,6 +1,7 @@
 import type { Editor } from '@tiptap/vue-3'
 import type { Ref } from 'vue'
 
+import { isInTable } from '@tiptap/pm/tables'
 import { computed, ref } from 'vue'
 
 export type SlashRange = { from: number, to: number } | null
@@ -20,6 +21,7 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
   const slashMenuSource = ref<SlashMenuSource>(null)
   const menuTargetBlockPos = ref<number | null>(null)
   const isTableMenuVisible = ref(false)
+  const isTableActionsEnabled = ref(false)
   const firstSlashMenuItem = 'paragraph'
 
   const slashMenuAnchorStyle = computed(() => ({
@@ -57,6 +59,7 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
 
   function syncMenuState(currentEditor: Editor) {
     isTableMenuVisible.value = currentEditor.isActive('table')
+    isTableActionsEnabled.value = isInTable(currentEditor.state)
   }
 
   function isTableContextAtPos(currentEditor: Editor, pos: number | null) {
@@ -168,6 +171,7 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     menuTargetBlockPos.value = targetPos
     slashMenuSource.value = source
     isTableMenuVisible.value = isTableContextAtPos(currentEditor, targetPos)
+    isTableActionsEnabled.value = isInTable(currentEditor.state)
     slashMenuHighlightedValue.value = firstSlashMenuItem
     slashMenuOpen.value = true
   }
@@ -181,6 +185,7 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     slashMenuSource,
     menuTargetBlockPos,
     isTableMenuVisible,
+    isTableActionsEnabled,
     syncMenuState,
     syncSlashMenu,
     onSlashMenuOpenChange,

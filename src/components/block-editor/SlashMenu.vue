@@ -24,6 +24,7 @@ interface SlashMenuProps {
   highlightedValue: string | null
   anchorStyle: Record<string, string>
   isTableMenuVisible: boolean
+  isTableActionsEnabled: boolean
   menuLabel: string
   menuSource: 'slash' | 'insert' | 'turn-into' | null
 }
@@ -89,7 +90,7 @@ const emit = defineEmits<{
         </DropdownMenuGroup>
       </template>
 
-      <template v-if="props.isTableMenuVisible">
+      <template v-if="props.isTableActionsEnabled">
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel>Table</DropdownMenuLabel>
