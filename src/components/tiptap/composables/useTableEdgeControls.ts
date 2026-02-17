@@ -8,6 +8,39 @@ interface UseTableEdgeControlsOptions {
   container: Ref<HTMLElement | null>
 }
 
+const EDGE_GAP_PX = 6
+const EDGE_BUTTON_SIZE_REM = 1
+const EDGE_RAIL_SIZE_REM = 4
+
+function buildTableEdgeStyles(tableRect: DOMRect, containerRect: DOMRect) {
+  return {
+    addColumnButtonStyle: {
+      left: `${tableRect.right - containerRect.left + EDGE_GAP_PX}px`,
+      top: `${tableRect.top - containerRect.top}px`,
+      height: `${tableRect.height}px`,
+      width: `${EDGE_BUTTON_SIZE_REM}rem`,
+    },
+    addRowButtonStyle: {
+      left: `${tableRect.left - containerRect.left}px`,
+      top: `${tableRect.bottom - containerRect.top + EDGE_GAP_PX}px`,
+      width: `${tableRect.width}px`,
+      height: `${EDGE_BUTTON_SIZE_REM}rem`,
+    },
+    addColumnRailStyle: {
+      left: `${tableRect.right - containerRect.left}px`,
+      top: `${tableRect.top - containerRect.top}px`,
+      height: `${tableRect.height}px`,
+      width: `${EDGE_RAIL_SIZE_REM}rem`,
+    },
+    addRowRailStyle: {
+      left: `${tableRect.left - containerRect.left}px`,
+      top: `${tableRect.bottom - containerRect.top}px`,
+      width: `${tableRect.width}px`,
+      height: `${EDGE_RAIL_SIZE_REM}rem`,
+    },
+  }
+}
+
 export function useTableEdgeControls({ editor, container }: UseTableEdgeControlsOptions) {
   const showAddColumnButton = ref(false)
   const showAddRowButton = ref(false)
@@ -96,37 +129,12 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
 
     const tableRect = tableElement.getBoundingClientRect()
     const containerRect = containerElement.getBoundingClientRect()
-    const edgeGap = 6
-    const edgeButtonSize = 1
-    const edgeRailSize = 4
+    const tableEdgeStyles = buildTableEdgeStyles(tableRect, containerRect)
 
-    addColumnButtonStyle.value = {
-      left: `${tableRect.right - containerRect.left + edgeGap}px`,
-      top: `${tableRect.top - containerRect.top}px`,
-      height: `${tableRect.height}px`,
-      width: `${edgeButtonSize}rem`,
-    }
-
-    addRowButtonStyle.value = {
-      left: `${tableRect.left - containerRect.left}px`,
-      top: `${tableRect.bottom - containerRect.top + edgeGap}px`,
-      width: `${tableRect.width}px`,
-      height: `${edgeButtonSize}rem`,
-    }
-
-    addColumnRailStyle.value = {
-      left: `${tableRect.right - containerRect.left}px`,
-      top: `${tableRect.top - containerRect.top}px`,
-      height: `${tableRect.height}px`,
-      width: `${edgeRailSize}rem`,
-    }
-
-    addRowRailStyle.value = {
-      left: `${tableRect.left - containerRect.left}px`,
-      top: `${tableRect.bottom - containerRect.top}px`,
-      width: `${tableRect.width}px`,
-      height: `${edgeRailSize}rem`,
-    }
+    addColumnButtonStyle.value = tableEdgeStyles.addColumnButtonStyle
+    addRowButtonStyle.value = tableEdgeStyles.addRowButtonStyle
+    addColumnRailStyle.value = tableEdgeStyles.addColumnRailStyle
+    addRowRailStyle.value = tableEdgeStyles.addRowRailStyle
 
     showAddColumnButton.value = isLastColumn
     showAddRowButton.value = isLastRow
@@ -169,37 +177,12 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
 
     const tableRect = tableElement.getBoundingClientRect()
     const containerRect = containerElement.getBoundingClientRect()
-    const edgeGap = 6
-    const edgeButtonSize = 1
-    const edgeRailSize = 4
+    const tableEdgeStyles = buildTableEdgeStyles(tableRect, containerRect)
 
-    addColumnButtonStyle.value = {
-      left: `${tableRect.right - containerRect.left + edgeGap}px`,
-      top: `${tableRect.top - containerRect.top}px`,
-      height: `${tableRect.height}px`,
-      width: `${edgeButtonSize}rem`,
-    }
-
-    addRowButtonStyle.value = {
-      left: `${tableRect.left - containerRect.left}px`,
-      top: `${tableRect.bottom - containerRect.top + edgeGap}px`,
-      width: `${tableRect.width}px`,
-      height: `${edgeButtonSize}rem`,
-    }
-
-    addColumnRailStyle.value = {
-      left: `${tableRect.right - containerRect.left}px`,
-      top: `${tableRect.top - containerRect.top}px`,
-      height: `${tableRect.height}px`,
-      width: `${edgeRailSize}rem`,
-    }
-
-    addRowRailStyle.value = {
-      left: `${tableRect.left - containerRect.left}px`,
-      top: `${tableRect.bottom - containerRect.top}px`,
-      width: `${tableRect.width}px`,
-      height: `${edgeRailSize}rem`,
-    }
+    addColumnButtonStyle.value = tableEdgeStyles.addColumnButtonStyle
+    addRowButtonStyle.value = tableEdgeStyles.addRowButtonStyle
+    addColumnRailStyle.value = tableEdgeStyles.addColumnRailStyle
+    addRowRailStyle.value = tableEdgeStyles.addRowRailStyle
 
     showAddColumnButton.value = true
     showAddRowButton.value = true
