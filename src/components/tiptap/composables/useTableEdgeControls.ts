@@ -10,7 +10,7 @@ interface UseTableEdgeControlsOptions {
 
 const EDGE_GAP_PX = 6
 const EDGE_BUTTON_SIZE_REM = 1
-const EDGE_RAIL_SIZE_REM = 4
+const EDGE_RAIL_SIZE_REM = 1
 
 function buildTableEdgeStyles(tableRect: DOMRect, containerRect: DOMRect) {
   return {
