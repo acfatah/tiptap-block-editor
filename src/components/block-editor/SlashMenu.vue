@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { Pilcrow, Table2 } from 'lucide-vue-next'
+import {
+  BetweenHorizontalEnd,
+  BetweenHorizontalStart,
+  BetweenVerticalEnd,
+  BetweenVerticalStart,
+  Pilcrow,
+  Table2,
+  Trash2,
+} from 'lucide-vue-next'
 
 import {
   DropdownMenuContent,
@@ -54,14 +62,14 @@ const emit = defineEmits<{
           v-if="props.menuSource !== 'turn-into' || props.isTableMenuVisible"
           value="paragraph"
         >
-          <Pilcrow :size="14" />
+          <Pilcrow />
           Paragraph
         </DropdownMenuItem>
         <DropdownMenuItem
           v-if="props.menuSource !== 'turn-into' || !props.isTableMenuVisible"
           value="table"
         >
-          <Table2 :size="14" />
+          <Table2 />
           Table
         </DropdownMenuItem>
       </DropdownMenuGroup>
@@ -71,21 +79,27 @@ const emit = defineEmits<{
         <DropdownMenuGroup>
           <DropdownMenuLabel>Table</DropdownMenuLabel>
           <DropdownMenuItem value="add-row-before">
+            <BetweenHorizontalStart class="[&>rect:first-of-type]:stroke-primary" />
             Add Row Above
           </DropdownMenuItem>
           <DropdownMenuItem value="add-row-after">
+            <BetweenHorizontalEnd class="[&>rect:last-of-type]:stroke-primary" />
             Add Row Below
           </DropdownMenuItem>
           <DropdownMenuItem value="delete-row">
+            <Trash2 />
             Delete Row
           </DropdownMenuItem>
           <DropdownMenuItem value="add-column-before">
+            <BetweenVerticalStart class="[&>rect:first-of-type]:stroke-primary" />
             Add Column Left
           </DropdownMenuItem>
           <DropdownMenuItem value="add-column-after">
+            <BetweenVerticalEnd class="[&>rect:last-of-type]:stroke-primary" />
             Add Column Right
           </DropdownMenuItem>
           <DropdownMenuItem value="delete-column">
+            <Trash2 />
             Delete Column
           </DropdownMenuItem>
         </DropdownMenuGroup>
