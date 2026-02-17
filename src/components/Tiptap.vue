@@ -65,18 +65,32 @@ const editor = useEditor({
       class: 'simple-editor',
     },
   },
-  onUpdate: ({ editor }) => {
-    emit('update:modelValue', editor.getHTML())
-    syncMenuState(editor)
-    syncSlashMenu(editor)
+  onUpdate: ({ editor: coreEditor }) => {
+    emit('update:modelValue', coreEditor.getHTML())
+
+    const currentEditor = editor.value
+    if (!currentEditor) {
+      return
+    }
+
+    syncMenuState(currentEditor)
+    syncSlashMenu(currentEditor)
   },
-  onSelectionUpdate: ({ editor }) => {
-    syncMenuState(editor)
-    syncSlashMenu(editor)
+  onSelectionUpdate: () => {
+    const currentEditor = editor.value
+    if (!currentEditor)
+      return
+
+    syncMenuState(currentEditor)
+    syncSlashMenu(currentEditor)
   },
-  onCreate: ({ editor }) => {
-    syncMenuState(editor)
-    syncSlashMenu(editor)
+  onCreate: () => {
+    const currentEditor = editor.value
+    if (!currentEditor)
+      return
+
+    syncMenuState(currentEditor)
+    syncSlashMenu(currentEditor)
   },
 })
 
