@@ -47,7 +47,9 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
       return null
     }
 
-    if (slashIndex > 0 && !/\s/.test(textBeforeCursor[slashIndex - 1])) {
+    const previousChar = textBeforeCursor.charAt(slashIndex - 1)
+
+    if (slashIndex > 0 && previousChar && !/\s/.test(previousChar)) {
       return null
     }
 

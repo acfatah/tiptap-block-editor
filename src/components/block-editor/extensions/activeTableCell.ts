@@ -18,12 +18,8 @@ export const ActiveTableCell = Extension.create({
               return null
             }
 
-            const $pos = state.selection.$anchorCell || state.selection.$from
-            if (!$pos) {
-              return null
-            }
-
             try {
+              const $pos = state.selection.$from
               const cellNode = $pos.node(-1)
               const cellPos = $pos.before(-1)
 

@@ -104,12 +104,19 @@ function tryParseMarkdownTable(text: string) {
     return null
   }
 
-  if (!lines[0].includes('|') || !lines[1].includes('|')) {
+  const headerLine = lines[0]
+  const separatorLine = lines[1]
+
+  if (!headerLine || !separatorLine) {
     return null
   }
 
-  const headerRow = splitMarkdownRow(lines[0])
-  const separatorRow = splitMarkdownRow(lines[1])
+  if (!headerLine.includes('|') || !separatorLine.includes('|')) {
+    return null
+  }
+
+  const headerRow = splitMarkdownRow(headerLine)
+  const separatorRow = splitMarkdownRow(separatorLine)
 
   if (!separatorRow.length || !separatorRow.every(isSeparatorCell)) {
     return null
