@@ -11,6 +11,7 @@ import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { onBeforeUnmount, ref, watch } from 'vue'
 
 import BlockHandleButtons from '@/components/block-editor/BlockHandleButtons.vue'
+import { createTableNodeContent, parseMarkdownTable } from '@/components/block-editor/composables/markdownTableParser'
 import { isMenuCommand, useBlockCommands } from '@/components/block-editor/composables/useBlockCommands'
 import { useSlashMenu } from '@/components/block-editor/composables/useSlashMenu'
 import { useTableEdgeControls } from '@/components/block-editor/composables/useTableEdgeControls'
@@ -64,6 +65,9 @@ const editor = useEditor({
     attributes: {
       class: 'simple-editor',
     },
+    handlePaste: (_, event) => {
+      return onEditorPaste(event)
+    },
   },
   onUpdate: ({ editor: coreEditor }) => {
     emit('update:modelValue', coreEditor.getHTML())
@@ -93,6 +97,37 @@ const editor = useEditor({
     syncSlashMenu(currentEditor)
   },
 })
+
+function onEditorPaste(event: ClipboardEvent) {
+  const currentEditor = editor.value
+  const clipboardData = event.clipboardData
+
+  if (!currentEditor || !clipboardData) {
+    return false
+  }
+
+  const htmlContent = clipboardData.getData('text/html').toLowerCase()
+
+  if (htmlContent.includes('<table')) {
+    return false
+  }
+
+  const plainText = clipboardData.getData('text/plain')
+  const parsedTable = parseMarkdownTable(plainText)
+
+  if (!parsedTable) {
+    return false
+  }
+
+  event.preventDefault()
+  currentEditor
+    .chain()
+    .focus()
+    .insertContent(createTableNodeContent(parsedTable.rows, parsedTable.withHeaderRow))
+    .run()
+
+  return true
+}
 
 const {
   showAddColumnButton,

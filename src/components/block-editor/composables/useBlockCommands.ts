@@ -3,6 +3,8 @@ import type { Ref } from 'vue'
 
 import type { SlashMenuSource, SlashRange } from './useSlashMenu'
 
+import { createTableNodeContent, parseTableText, rowsToPlainText } from './markdownTableParser'
+
 export type BlockCommand = 'paragraph' | 'table'
 export type TableCommand
   = | 'add-row-before'
@@ -36,35 +38,39 @@ export function isMenuCommand(value: string): value is MenuCommand {
 }
 
 export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTargetBlockPos }: UseBlockCommandsOptions) {
-  function createTableNode() {
+  function getTableNodeRows(node: {
+    childCount: number
+    child: (index: number) => {
+      childCount: number
+      child: (childIndex: number) => { textContent: string }
+    }
+  }) {
+    const rows: string[][] = []
+
+    for (let rowIndex = 0; rowIndex < node.childCount; rowIndex += 1) {
+      const rowNode = node.child(rowIndex)
+      const row: string[] = []
+
+      for (let columnIndex = 0; columnIndex < rowNode.childCount; columnIndex += 1) {
+        const cellNode = rowNode.child(columnIndex)
+        row.push(cellNode.textContent)
+      }
+
+      rows.push(row)
+    }
+
+    return rows
+  }
+
+  function createParagraphNode(text: string) {
     return {
-      type: 'table',
-      content: [
-        {
-          type: 'tableRow',
-          content: [
-            { type: 'tableHeader', content: [{ type: 'paragraph' }] },
-            { type: 'tableHeader', content: [{ type: 'paragraph' }] },
-            { type: 'tableHeader', content: [{ type: 'paragraph' }] },
-          ],
-        },
-        {
-          type: 'tableRow',
-          content: [
-            { type: 'tableCell', content: [{ type: 'paragraph' }] },
-            { type: 'tableCell', content: [{ type: 'paragraph' }] },
-            { type: 'tableCell', content: [{ type: 'paragraph' }] },
-          ],
-        },
-        {
-          type: 'tableRow',
-          content: [
-            { type: 'tableCell', content: [{ type: 'paragraph' }] },
-            { type: 'tableCell', content: [{ type: 'paragraph' }] },
-            { type: 'tableCell', content: [{ type: 'paragraph' }] },
-          ],
-        },
-      ],
+      type: 'paragraph',
+      content: text
+        ? [{
+            type: 'text',
+            text,
+          }]
+        : [],
     }
   }
 
@@ -85,11 +91,29 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
     const to = pos + node.nodeSize
 
     if (command === 'table') {
-      currentEditor.chain().focus().deleteRange({ from, to }).insertContentAt(from, createTableNode()).run()
+      const parsedTable = parseTableText(node.textContent)
+
+      currentEditor
+        .chain()
+        .focus()
+        .deleteRange({ from, to })
+        .insertContentAt(from, createTableNodeContent(parsedTable.rows, parsedTable.withHeaderRow))
+        .run()
+
       currentEditor.commands.setTextSelection(from + 4)
     }
     else {
-      currentEditor.chain().focus().deleteRange({ from, to }).insertContentAt(from, { type: 'paragraph' }).run()
+      const paragraphText = node.type.name === 'table'
+        ? rowsToPlainText(getTableNodeRows(node))
+        : node.textContent
+
+      currentEditor
+        .chain()
+        .focus()
+        .deleteRange({ from, to })
+        .insertContentAt(from, createParagraphNode(paragraphText))
+        .run()
+
       currentEditor.commands.setTextSelection(from + 1)
     }
   }
