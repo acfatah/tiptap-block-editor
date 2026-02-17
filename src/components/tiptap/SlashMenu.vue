@@ -17,6 +17,7 @@ interface SlashMenuProps {
   anchorStyle: Record<string, string>
   isTableMenuVisible: boolean
   menuLabel: string
+  menuSource: 'slash' | 'insert' | 'turn-into' | null
 }
 
 const props = defineProps<SlashMenuProps>()
@@ -49,11 +50,17 @@ const emit = defineEmits<{
     <DropdownMenuContent side="bottom" align="start" class="w-44">
       <DropdownMenuGroup>
         <DropdownMenuLabel>{{ props.menuLabel }}</DropdownMenuLabel>
-        <DropdownMenuItem value="paragraph">
+        <DropdownMenuItem
+          v-if="props.menuSource !== 'turn-into' || props.isTableMenuVisible"
+          value="paragraph"
+        >
           <Pilcrow :size="14" />
           Paragraph
         </DropdownMenuItem>
-        <DropdownMenuItem value="table">
+        <DropdownMenuItem
+          v-if="props.menuSource !== 'turn-into' || !props.isTableMenuVisible"
+          value="table"
+        >
           <Table2 :size="14" />
           Table
         </DropdownMenuItem>

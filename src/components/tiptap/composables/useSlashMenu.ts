@@ -59,6 +59,27 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     isTableMenuVisible.value = currentEditor.isActive('table')
   }
 
+  function isTableContextAtPos(currentEditor: Editor, pos: number | null) {
+    if (pos === null) {
+      return currentEditor.isActive('table')
+    }
+
+    const { doc } = currentEditor.state
+    const directNode = doc.nodeAt(pos)
+    if (directNode?.type.name === 'table') {
+      return true
+    }
+
+    const resolvedPos = doc.resolve(Math.min(pos + 1, doc.content.size))
+    for (let depth = resolvedPos.depth; depth >= 0; depth -= 1) {
+      if (resolvedPos.node(depth).type.name === 'table') {
+        return true
+      }
+    }
+
+    return false
+  }
+
   function closeMenu() {
     slashMenuOpen.value = false
     slashRange.value = null
@@ -142,9 +163,11 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
       x: rect.left,
       y: rect.bottom + 6,
     }
+    const targetPos = resolveBlockTargetPos(currentEditor)
     slashRange.value = null
-    menuTargetBlockPos.value = resolveBlockTargetPos(currentEditor)
+    menuTargetBlockPos.value = targetPos
     slashMenuSource.value = source
+    isTableMenuVisible.value = isTableContextAtPos(currentEditor, targetPos)
     slashMenuHighlightedValue.value = firstSlashMenuItem
     slashMenuOpen.value = true
   }

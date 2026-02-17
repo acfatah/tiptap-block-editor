@@ -149,7 +149,6 @@ function onDragHandleClick(event: MouseEvent) {
     return
   }
 
-  syncMenuState(currentEditor)
   openMenuFromTrigger(currentEditor, event, 'turn-into')
 }
 
@@ -159,7 +158,6 @@ function onAddHandleClick(event: MouseEvent) {
     return
   }
 
-  syncMenuState(currentEditor)
   openMenuFromTrigger(currentEditor, event, 'insert')
 }
 
@@ -195,6 +193,7 @@ onBeforeUnmount(() => {
       :open="slashMenuOpen"
       :highlighted-value="slashMenuHighlightedValue"
       :anchor-style="slashMenuAnchorStyle"
+      :menu-source="slashMenuSource"
       :is-table-menu-visible="isTableMenuVisible"
       :menu-label="getMenuLabel()"
       @update:open="onSlashMenuOpenChange"
