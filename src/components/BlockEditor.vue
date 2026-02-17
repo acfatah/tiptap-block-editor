@@ -10,13 +10,13 @@ import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { onBeforeUnmount, ref, watch } from 'vue'
 
-import BlockHandleButtons from '@/components/tiptap/BlockHandleButtons.vue'
-import { isMenuCommand, useBlockCommands } from '@/components/tiptap/composables/useBlockCommands'
-import { useSlashMenu } from '@/components/tiptap/composables/useSlashMenu'
-import { useTableEdgeControls } from '@/components/tiptap/composables/useTableEdgeControls'
-import { ActiveTableCell } from '@/components/tiptap/extensions/activeTableCell'
-import SlashMenu from '@/components/tiptap/SlashMenu.vue'
-import TableEdgeControls from '@/components/tiptap/TableEdgeControls.vue'
+import BlockHandleButtons from '@/components/block-editor/BlockHandleButtons.vue'
+import { isMenuCommand, useBlockCommands } from '@/components/block-editor/composables/useBlockCommands'
+import { useSlashMenu } from '@/components/block-editor/composables/useSlashMenu'
+import { useTableEdgeControls } from '@/components/block-editor/composables/useTableEdgeControls'
+import { ActiveTableCell } from '@/components/block-editor/extensions/activeTableCell'
+import SlashMenu from '@/components/block-editor/SlashMenu.vue'
+import TableEdgeControls from '@/components/block-editor/TableEdgeControls.vue'
 
 const props = defineProps<{
   modelValue: string

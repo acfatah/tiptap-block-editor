@@ -98,8 +98,8 @@ Used to query/add components from a remote registry (see `scripts/ui.ts`).
 ```text
 src/
    components/
-      Tiptap.vue                      # Main editor component
-      tiptap/
+    BlockEditor.vue                 # Main editor component
+    editor/
          BlockHandleButtons.vue        # Drag/add block controls
          SlashMenu.vue                 # Slash + turn-into menu UI
          TableEdgeControls.vue         # Edge controls for table row/column insertion
