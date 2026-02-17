@@ -6,6 +6,7 @@ import type { SlashMenuSource, SlashRange } from './useSlashMenu'
 import { createTableNodeContent, parseTableText, rowsToPlainText } from './markdownTableParser'
 
 export type BlockCommand = 'paragraph' | 'table'
+export type DeleteCommand = 'delete-block'
 export type TableCommand
   = | 'add-row-before'
     | 'add-row-after'
@@ -13,7 +14,7 @@ export type TableCommand
     | 'add-column-before'
     | 'add-column-after'
     | 'delete-column'
-export type MenuCommand = BlockCommand | TableCommand
+export type MenuCommand = BlockCommand | TableCommand | DeleteCommand
 
 interface UseBlockCommandsOptions {
   editor: Ref<Editor | null>
@@ -25,6 +26,7 @@ interface UseBlockCommandsOptions {
 const menuCommands = new Set<MenuCommand>([
   'paragraph',
   'table',
+  'delete-block',
   'add-row-before',
   'add-row-after',
   'delete-row',
@@ -206,6 +208,42 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
     }
   }
 
+  function resolveDeleteBlockPos(currentEditor: Editor) {
+    if (menuTargetBlockPos.value !== null) {
+      return menuTargetBlockPos.value
+    }
+
+    const { $from } = currentEditor.state.selection
+    if ($from.depth < 1) {
+      return null
+    }
+
+    return $from.before(1)
+  }
+
+  function executeDeleteCommand() {
+    const currentEditor = editor.value
+    if (!currentEditor) {
+      return
+    }
+
+    const pos = resolveDeleteBlockPos(currentEditor)
+    if (pos === null) {
+      return
+    }
+
+    const node = currentEditor.state.doc.nodeAt(pos)
+    if (!node) {
+      return
+    }
+
+    currentEditor
+      .chain()
+      .focus()
+      .deleteRange({ from: pos, to: pos + node.nodeSize })
+      .run()
+  }
+
   function getHoveredBlockInsertPos(currentEditor: Editor) {
     const pos = menuTargetBlockPos.value
 
@@ -267,6 +305,9 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
       || command === 'delete-column'
     ) {
       executeTableCommand(command)
+    }
+    else if (command === 'delete-block') {
+      executeDeleteCommand()
     }
     else {
       executeBlockCommand(command)

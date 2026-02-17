@@ -201,3 +201,32 @@ describe('useBlockCommands turn-into conversion', () => {
     expect(payload.content.content[1].content[1].content[0].content[0].text).toBe('12')
   })
 })
+
+describe('useBlockCommands delete command', () => {
+  it('deletes the targeted block range', () => {
+    const calls: Array<[string, unknown?]> = []
+    const node = {
+      nodeSize: 6,
+      textContent: 'Hello',
+      type: { name: 'paragraph' },
+    }
+
+    const editor = ref(createEditor(node, calls) as any)
+    const slashRange = ref(null)
+    const slashMenuSource = ref('insert' as const)
+    const menuTargetBlockPos = ref(12)
+
+    const { executeMenuCommand } = useBlockCommands({
+      editor,
+      slashRange,
+      slashMenuSource,
+      menuTargetBlockPos,
+    })
+
+    executeMenuCommand('delete-block')
+
+    const deleteCall = calls.find(([name]) => name === 'deleteRange')
+    expect(deleteCall).toBeDefined()
+    expect(deleteCall?.[1]).toEqual({ from: 12, to: 18 })
+  })
+})

@@ -55,7 +55,12 @@ const emit = defineEmits<{
       />
     </DropdownMenuTrigger>
 
-    <DropdownMenuContent side="bottom" align="start" class="w-44">
+    <DropdownMenuContent
+      side="bottom" align="start" class="
+        w-44
+        data-[side=bottom]:-mt-3
+      "
+    >
       <DropdownMenuGroup>
         <DropdownMenuLabel>{{ props.menuLabel }}</DropdownMenuLabel>
         <DropdownMenuItem
@@ -73,6 +78,16 @@ const emit = defineEmits<{
           Table
         </DropdownMenuItem>
       </DropdownMenuGroup>
+
+      <template v-if="props.menuSource !== 'slash'">
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem value="delete-block">
+            <Trash2 />
+            Remove
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </template>
 
       <template v-if="props.isTableMenuVisible">
         <DropdownMenuSeparator />

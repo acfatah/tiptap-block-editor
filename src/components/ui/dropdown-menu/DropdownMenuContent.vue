@@ -29,6 +29,7 @@ const forwardedProps = useForwardPropsEmits(delegatedProps)
         v-bind="forwardedProps"
         data-scope="dropdown-menu"
         data-part="content"
+        :data-side="props.side"
         :class="cn(
           `
             z-50 max-h-(--available-height) min-w-32 origin-(--transform-origin) overflow-x-hidden
