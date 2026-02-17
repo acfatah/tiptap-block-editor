@@ -207,6 +207,25 @@ function onSlashMenuSelect(details: { value: string }) {
   closeMenu()
 }
 
+function onSlashMenuOpenChangeWithFocus(open: boolean) {
+  const currentEditor = editor.value
+  const range = slashRange.value
+
+  onSlashMenuOpenChange(open)
+
+  if (open || !currentEditor) {
+    return
+  }
+
+  requestAnimationFrame(() => {
+    currentEditor.commands.focus()
+
+    if (range) {
+      currentEditor.commands.setTextSelection(range.to)
+    }
+  })
+}
+
 function onDragHandleClick(event: MouseEvent) {
   const currentEditor = editor.value
   if (!currentEditor) {
@@ -261,7 +280,7 @@ onBeforeUnmount(() => {
       :is-table-menu-visible="isTableMenuVisible"
       :is-table-actions-enabled="isTableActionsEnabled"
       :menu-label="getMenuLabel()"
-      @update:open="onSlashMenuOpenChange"
+      @update:open="onSlashMenuOpenChangeWithFocus"
       @update:highlighted-value="onSlashMenuHighlightedValueChange"
       @select="onSlashMenuSelect"
     />
