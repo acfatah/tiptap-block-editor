@@ -17,6 +17,7 @@ An example of block-style editor built with Vue 3 + TypeScript + Bun, powered by
 
 - Block editor with drag handle and block controls
 - Slash menu (`/`) for quick block insertion
+- Bubble menu for inline formatting (bold, italic, underline, strikethrough)
 - Turn-into / insert actions for paragraph and table blocks
 - Table support with row/column operations
 - Table edge controls (add row / add column)

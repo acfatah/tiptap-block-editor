@@ -8,7 +8,9 @@ import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { BubbleMenu } from '@tiptap/vue-3/menus'
+import { Bold, Italic, Strikethrough, Underline as UnderlineIcon } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import BlockHandleButtons from '@/components/block-editor/BlockHandleButtons.vue'
 import { createTableNodeContent, parseMarkdownTable } from '@/components/block-editor/composables/markdownTableParser'
@@ -18,6 +20,7 @@ import { useTableEdgeControls } from '@/components/block-editor/composables/useT
 import { ActiveTableCell } from '@/components/block-editor/extensions/activeTableCell'
 import SlashMenu from '@/components/block-editor/SlashMenu.vue'
 import TableEdgeControls from '@/components/block-editor/TableEdgeControls.vue'
+import { ToggleGroup } from '@/components/ui/toggle-group'
 
 const props = defineProps<{
   modelValue: string
@@ -29,6 +32,16 @@ const emit = defineEmits<{
 
 const hoveredBlockPos = ref<number | null>(null)
 const blockEditorElement = ref<HTMLElement | null>(null)
+const selectionTick = ref(0)
+
+const bubbleMenuItems = [
+  { value: 'bold', label: 'Bold', icon: Bold },
+  { value: 'italic', label: 'Italic', icon: Italic },
+  { value: 'underline', label: 'Underline', icon: UnderlineIcon },
+  { value: 'strike', label: 'Strikethrough', icon: Strikethrough },
+]
+
+type MarkValue = (typeof bubbleMenuItems)[number]['value']
 
 const {
   slashMenuOpen,
@@ -83,6 +96,8 @@ const editor = useEditor({
 
     syncMenuState(currentEditor)
     syncSlashMenu(currentEditor)
+
+    selectionTick.value += 1
   },
   onSelectionUpdate: () => {
     const currentEditor = editor.value
@@ -91,6 +106,8 @@ const editor = useEditor({
 
     syncMenuState(currentEditor)
     syncSlashMenu(currentEditor)
+
+    selectionTick.value += 1
   },
   onCreate: () => {
     const currentEditor = editor.value
@@ -99,7 +116,22 @@ const editor = useEditor({
 
     syncMenuState(currentEditor)
     syncSlashMenu(currentEditor)
+
+    selectionTick.value += 1
   },
+})
+
+const activeMarks = computed(() => {
+  const selectionKey = selectionTick.value
+  const currentEditor = editor.value
+
+  if (!currentEditor || selectionKey < 0) {
+    return []
+  }
+
+  return bubbleMenuItems
+    .map(item => item.value)
+    .filter(value => currentEditor.isActive(value))
 })
 
 function onEditorPaste(event: ClipboardEvent) {
@@ -180,6 +212,32 @@ const { executeMenuCommand } = useBlockCommands({
   slashMenuSource,
   menuTargetBlockPos,
 })
+
+function toggleMark(mark: MarkValue) {
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return
+  }
+
+  const commandChain = currentEditor.chain().focus()
+
+  switch (mark) {
+    case 'bold':
+      commandChain.toggleBold()
+      break
+    case 'italic':
+      commandChain.toggleItalic()
+      break
+    case 'underline':
+      commandChain.toggleUnderline()
+      break
+    case 'strike':
+      commandChain.toggleStrike()
+      break
+  }
+
+  commandChain.run()
+}
 
 function onNodeChange(data: { node: ProseMirrorNode | null, pos: number }) {
   hoveredBlockPos.value = data?.node ? data.pos : null
@@ -272,6 +330,35 @@ onBeforeUnmount(() => {
     @mouseleave="resetTableEdgeButtons"
   >
     <EditorContent :editor="editor" class="editor-content" />
+    <BubbleMenu
+      v-if="editor"
+      :editor="editor"
+      :tippy-options="{ duration: 120, placement: 'top' }"
+      :should-show="({ state }) => !state.selection.empty"
+    >
+      <div
+        class="rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+      >
+        <ToggleGroup.Root
+          :model-value="activeMarks"
+          multiple
+          size="sm"
+          variant="default"
+          :spacing="4"
+        >
+          <ToggleGroup.Item
+            v-for="item in bubbleMenuItems"
+            :key="item.value"
+            :value="item.value"
+            type="button"
+            :aria-label="item.label"
+            @click="toggleMark(item.value)"
+          >
+            <component :is="item.icon" />
+          </ToggleGroup.Item>
+        </ToggleGroup.Root>
+      </div>
+    </BubbleMenu>
     <SlashMenu
       :open="slashMenuOpen"
       :highlighted-value="slashMenuHighlightedValue"
