@@ -19,7 +19,7 @@ export type TableCommand
 export type MenuCommand = BlockCommand | TableCommand | DeleteCommand
 
 interface UseBlockCommandsOptions {
-  editor: Ref<Editor | null>
+  editor: Ref<Editor | null | undefined>
   slashRange: Ref<SlashRange>
   slashMenuSource: Ref<SlashMenuSource>
   menuTargetBlockPos: Ref<number | null>

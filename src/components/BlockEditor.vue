@@ -6,11 +6,12 @@ import { Table } from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
+import { CellSelection } from '@tiptap/pm/tables'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { BubbleMenu } from '@tiptap/vue-3/menus'
 import { Bold, Italic, Strikethrough, Underline as UnderlineIcon } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import BlockHandleButtons from '@/components/block-editor/BlockHandleButtons.vue'
 import { createTableNodeContent, parseMarkdownTable } from '@/components/block-editor/composables/markdownTableParser'
@@ -33,6 +34,8 @@ const emit = defineEmits<{
 const hoveredBlockPos = ref<number | null>(null)
 const blockEditorElement = ref<HTMLElement | null>(null)
 const selectionTick = ref(0)
+const isMouseDownInEditor = ref(false)
+const shouldOpenTableMenuOnMouseUp = ref(false)
 
 const bubbleMenuItems = [
   { value: 'bold', label: 'Bold', icon: Bold },
@@ -57,6 +60,7 @@ const {
   onSlashMenuOpenChange,
   onSlashMenuHighlightedValueChange,
   getMenuLabel,
+  openMenuFromHandle,
   openMenuFromTrigger,
   closeMenu,
 } = useSlashMenu({
@@ -106,6 +110,7 @@ const editor = useEditor({
 
     syncMenuState(currentEditor)
     syncSlashMenu(currentEditor)
+    queueOrOpenSlashMenuForTableSelection(currentEditor)
 
     selectionTick.value += 1
   },
@@ -133,6 +138,86 @@ const activeMarks = computed(() => {
     .map(item => item.value)
     .filter(value => currentEditor.isActive(value))
 })
+
+const shouldShowBubbleMenu = computed(() => {
+  const selectionKey = selectionTick.value
+  const currentEditor = editor.value
+
+  if (!currentEditor || selectionKey < 0 || currentEditor.state.selection.empty) {
+    return false
+  }
+
+  return !isTableCellSelection(currentEditor)
+})
+
+const isAnyMenuOpen = computed(() => {
+  return slashMenuOpen.value || shouldShowBubbleMenu.value
+})
+
+function isTableRowOrColumnSelection(currentEditor: NonNullable<typeof editor.value>) {
+  const { selection } = currentEditor.state
+
+  if (!(selection instanceof CellSelection)) {
+    return false
+  }
+
+  return selection.isRowSelection() || selection.isColSelection()
+}
+
+function isTableCellSelection(currentEditor: NonNullable<typeof editor.value>) {
+  return currentEditor.state.selection instanceof CellSelection
+}
+
+function maybeOpenSlashMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
+  if (!isTableRowOrColumnSelection(currentEditor) || slashMenuOpen.value) {
+    return
+  }
+
+  openMenuFromHandle(currentEditor, 'turn-into')
+}
+
+function queueOrOpenSlashMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
+  const isRowOrColumnSelection = isTableRowOrColumnSelection(currentEditor)
+
+  if (!isRowOrColumnSelection || slashMenuOpen.value) {
+    shouldOpenTableMenuOnMouseUp.value = false
+
+    return
+  }
+
+  if (isMouseDownInEditor.value) {
+    shouldOpenTableMenuOnMouseUp.value = true
+
+    return
+  }
+
+  maybeOpenSlashMenuForTableSelection(currentEditor)
+}
+
+function onBlockEditorMouseDown() {
+  isMouseDownInEditor.value = true
+}
+
+function onGlobalMouseUp() {
+  isMouseDownInEditor.value = false
+
+  if (!shouldOpenTableMenuOnMouseUp.value) {
+    return
+  }
+
+  shouldOpenTableMenuOnMouseUp.value = false
+
+  const currentEditor = editor.value
+  if (!currentEditor) {
+    return
+  }
+
+  maybeOpenSlashMenuForTableSelection(currentEditor)
+}
+
+function shouldShowBubbleMenuForSelection() {
+  return shouldShowBubbleMenu.value
+}
 
 function onEditorPaste(event: ClipboardEvent) {
   const currentEditor = editor.value
@@ -204,6 +289,7 @@ const {
 } = useTableEdgeControls({
   editor,
   container: blockEditorElement,
+  isMenuOpen: isAnyMenuOpen,
 })
 
 const { executeMenuCommand } = useBlockCommands({
@@ -317,8 +403,13 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  window.removeEventListener('mouseup', onGlobalMouseUp)
   resetTableEdgeButtons()
   editor.value?.destroy()
+})
+
+onMounted(() => {
+  window.addEventListener('mouseup', onGlobalMouseUp)
 })
 </script>
 
@@ -326,6 +417,7 @@ onBeforeUnmount(() => {
   <div
     ref="blockEditorElement"
     class="block-editor"
+    @mousedown="onBlockEditorMouseDown"
     @mousemove="onBlockEditorMouseMove"
     @mouseleave="resetTableEdgeButtons"
   >
@@ -334,7 +426,7 @@ onBeforeUnmount(() => {
       v-if="editor"
       :editor="editor"
       :tippy-options="{ duration: 120, placement: 'top' }"
-      :should-show="({ state }) => !state.selection.empty"
+      :should-show="shouldShowBubbleMenuForSelection"
     >
       <div
         class="rounded-md border bg-popover p-1 text-popover-foreground shadow-md"

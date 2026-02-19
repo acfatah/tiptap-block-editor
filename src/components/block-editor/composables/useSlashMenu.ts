@@ -59,6 +59,28 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     return { from, to }
   }
 
+  function resolveMenuAnchorPosition(currentEditor: Editor, targetPos: number | null) {
+    const targetNode = targetPos === null
+      ? null
+      : currentEditor.view.nodeDOM(targetPos)
+
+    if (targetNode instanceof HTMLElement) {
+      const rect = targetNode.getBoundingClientRect()
+
+      return {
+        x: rect.left,
+        y: rect.top + 24,
+      }
+    }
+
+    const coords = currentEditor.view.coordsAtPos(currentEditor.state.selection.from)
+
+    return {
+      x: coords.left,
+      y: coords.bottom + 6,
+    }
+  }
+
   function syncMenuState(currentEditor: Editor) {
     isTableMenuVisible.value = currentEditor.isActive('table')
     isTableActionsEnabled.value = isInTable(currentEditor.state)
@@ -178,6 +200,20 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     slashMenuOpen.value = true
   }
 
+  function openMenuFromHandle(currentEditor: Editor, source: SlashMenuSourceValue) {
+    const targetPos = resolveBlockTargetPos(currentEditor)
+    const position = resolveMenuAnchorPosition(currentEditor, targetPos)
+
+    slashMenuPosition.value = position
+    slashRange.value = null
+    menuTargetBlockPos.value = targetPos
+    slashMenuSource.value = source
+    isTableMenuVisible.value = isTableContextAtPos(currentEditor, targetPos)
+    isTableActionsEnabled.value = isInTable(currentEditor.state)
+    slashMenuHighlightedValue.value = firstSlashMenuItem
+    slashMenuOpen.value = true
+  }
+
   return {
     slashMenuOpen,
     slashMenuPosition,
@@ -194,6 +230,7 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     onSlashMenuHighlightedValueChange,
     getMenuLabel,
     openMenuFromTrigger,
+    openMenuFromHandle,
     closeMenu,
   }
 }

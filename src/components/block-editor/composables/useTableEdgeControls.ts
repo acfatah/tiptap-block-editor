@@ -5,8 +5,9 @@ import { isInTable } from '@tiptap/pm/tables'
 import { ref } from 'vue'
 
 interface UseTableEdgeControlsOptions {
-  editor: Ref<Editor | null>
+  editor: Ref<Editor | null | undefined>
   container: Ref<HTMLElement | null>
+  isMenuOpen: Ref<boolean>
 }
 
 const EDGE_GAP_PX = 6
@@ -42,7 +43,7 @@ function buildTableEdgeStyles(tableRect: DOMRect, containerRect: DOMRect) {
   }
 }
 
-export function useTableEdgeControls({ editor, container }: UseTableEdgeControlsOptions) {
+export function useTableEdgeControls({ editor, container, isMenuOpen }: UseTableEdgeControlsOptions) {
   const showAddColumnButton = ref(false)
   const showAddRowButton = ref(false)
   const addColumnButtonStyle = ref<Record<string, string>>({})
@@ -65,6 +66,12 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
     const currentEditor = editor.value
     const containerElement = container.value
     const targetElement = target instanceof Element ? target : null
+
+    if (isMenuOpen.value) {
+      resetTableEdgeButtons()
+
+      return
+    }
 
     if (!currentEditor || !containerElement || !targetElement) {
       resetTableEdgeButtons()
@@ -151,6 +158,12 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
     const currentEditor = editor.value
     const containerElement = container.value
 
+    if (isMenuOpen.value) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
     if (!currentEditor || !containerElement || !tableElement) {
       resetTableEdgeButtons()
 
@@ -202,6 +215,12 @@ export function useTableEdgeControls({ editor, container }: UseTableEdgeControls
   }
 
   function onBlockEditorMouseMove(event: MouseEvent) {
+    if (isMenuOpen.value) {
+      resetTableEdgeButtons()
+
+      return
+    }
+
     updateTableEdgeButtons(event.target)
   }
 
