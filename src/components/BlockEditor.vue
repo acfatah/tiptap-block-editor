@@ -55,6 +55,8 @@ const {
   menuTargetBlockPos,
   isTableMenuVisible,
   isTableActionsEnabled,
+  canDeleteTableRow,
+  canDeleteTableColumn,
   syncMenuState,
   syncSlashMenu,
   onSlashMenuOpenChange,
@@ -458,6 +460,8 @@ onMounted(() => {
       :menu-source="slashMenuSource"
       :is-table-menu-visible="isTableMenuVisible"
       :is-table-actions-enabled="isTableActionsEnabled"
+      :can-delete-table-row="canDeleteTableRow"
+      :can-delete-table-column="canDeleteTableColumn"
       :menu-label="getMenuLabel()"
       @update:open="onSlashMenuOpenChangeWithFocus"
       @update:highlighted-value="onSlashMenuHighlightedValueChange"

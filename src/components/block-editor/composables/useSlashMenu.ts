@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/vue-3'
 import type { Ref } from 'vue'
 
-import { isInTable } from '@tiptap/pm/tables'
+import { CellSelection, isInTable } from '@tiptap/pm/tables'
 import { computed, ref } from 'vue'
 
 export type SlashRange = { from: number, to: number } | null
@@ -22,6 +22,8 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
   const menuTargetBlockPos = ref<number | null>(null)
   const isTableMenuVisible = ref(false)
   const isTableActionsEnabled = ref(false)
+  const canDeleteTableRow = ref(true)
+  const canDeleteTableColumn = ref(true)
   const firstSlashMenuItem = 'paragraph'
 
   const slashMenuAnchorStyle = computed(() => ({
@@ -81,9 +83,38 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     }
   }
 
+  function syncDeleteTableActionAvailability(currentEditor: Editor) {
+    const { selection } = currentEditor.state
+
+    if (!(selection instanceof CellSelection)) {
+      canDeleteTableRow.value = true
+      canDeleteTableColumn.value = true
+
+      return
+    }
+
+    if (selection.isRowSelection()) {
+      canDeleteTableRow.value = true
+      canDeleteTableColumn.value = false
+
+      return
+    }
+
+    if (selection.isColSelection()) {
+      canDeleteTableRow.value = false
+      canDeleteTableColumn.value = true
+
+      return
+    }
+
+    canDeleteTableRow.value = true
+    canDeleteTableColumn.value = true
+  }
+
   function syncMenuState(currentEditor: Editor) {
     isTableMenuVisible.value = currentEditor.isActive('table')
     isTableActionsEnabled.value = isInTable(currentEditor.state)
+    syncDeleteTableActionAvailability(currentEditor)
   }
 
   function isTableContextAtPos(currentEditor: Editor, pos: number | null) {
@@ -196,6 +227,7 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     slashMenuSource.value = source
     isTableMenuVisible.value = isTableContextAtPos(currentEditor, targetPos)
     isTableActionsEnabled.value = isInTable(currentEditor.state)
+    syncDeleteTableActionAvailability(currentEditor)
     slashMenuHighlightedValue.value = firstSlashMenuItem
     slashMenuOpen.value = true
   }
@@ -210,6 +242,7 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     slashMenuSource.value = source
     isTableMenuVisible.value = isTableContextAtPos(currentEditor, targetPos)
     isTableActionsEnabled.value = isInTable(currentEditor.state)
+    syncDeleteTableActionAvailability(currentEditor)
     slashMenuHighlightedValue.value = firstSlashMenuItem
     slashMenuOpen.value = true
   }
@@ -224,6 +257,8 @@ export function useSlashMenu({ hoveredBlockPos }: UseSlashMenuOptions) {
     menuTargetBlockPos,
     isTableMenuVisible,
     isTableActionsEnabled,
+    canDeleteTableRow,
+    canDeleteTableColumn,
     syncMenuState,
     syncSlashMenu,
     onSlashMenuOpenChange,

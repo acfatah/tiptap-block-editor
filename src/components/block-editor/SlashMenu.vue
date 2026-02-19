@@ -25,6 +25,8 @@ interface SlashMenuProps {
   anchorStyle: Record<string, string>
   isTableMenuVisible: boolean
   isTableActionsEnabled: boolean
+  canDeleteTableRow: boolean
+  canDeleteTableColumn: boolean
   menuLabel: string
   menuSource: 'slash' | 'insert' | 'turn-into' | null
 }
@@ -102,7 +104,7 @@ const emit = defineEmits<{
             <BetweenHorizontalEnd class="[&>rect:last-of-type]:stroke-primary" />
             Add Row Below
           </DropdownMenuItem>
-          <DropdownMenuItem value="delete-row">
+          <DropdownMenuItem v-if="props.canDeleteTableRow" value="delete-row">
             <Trash2 />
             Delete Row
           </DropdownMenuItem>
@@ -114,7 +116,7 @@ const emit = defineEmits<{
             <BetweenVerticalEnd class="[&>rect:last-of-type]:stroke-primary" />
             Add Column Right
           </DropdownMenuItem>
-          <DropdownMenuItem value="delete-column">
+          <DropdownMenuItem v-if="props.canDeleteTableColumn" value="delete-column">
             <Trash2 />
             Delete Column
           </DropdownMenuItem>
