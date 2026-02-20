@@ -511,6 +511,33 @@ onMounted(() => {
   margin-block: 0.3rem;
 }
 
+.editor-content :deep(.ProseMirror ul),
+.editor-content :deep(.ProseMirror ol) {
+  margin-block: 0.4rem;
+  padding-left: 1.5rem;
+}
+
+.editor-content :deep(.ProseMirror ul) {
+  list-style-type: disc;
+}
+
+.editor-content :deep(.ProseMirror ol) {
+  list-style-type: decimal;
+}
+
+.editor-content :deep(.ProseMirror li) {
+  margin-block: 0.25rem;
+}
+
+.editor-content :deep(.ProseMirror li > p) {
+  margin: 0;
+}
+
+.editor-content :deep(.ProseMirror li > ul),
+.editor-content :deep(.ProseMirror li > ol) {
+  margin-top: 0.35rem;
+}
+
 .editor-content :deep(.ProseMirror table) {
   width: 100%;
   border-collapse: collapse;
