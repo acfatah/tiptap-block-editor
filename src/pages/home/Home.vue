@@ -4,14 +4,14 @@ import { ref } from 'vue'
 
 import BlockEditor from '@/components/BlockEditor.vue'
 
-const value = ref(`
-<p>Try to paste data copied from a spreadsheet or a Markdown table.</p>
-`)
+import sample from './sample.txt?raw'
+
+const value = ref(sample)
 
 watchDebounced(value, (newValue) => {
   // eslint-disable-next-line no-console
   console.log('Content updated:', newValue)
-}, { debounce: 500 })
+}, { debounce: 1000 })
 </script>
 
 <template>
