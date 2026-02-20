@@ -7,7 +7,7 @@ import type { SlashMenuSource, SlashRange } from './useSlashMenu'
 
 import { createTableNodeContent, parseTableText, rowsToPlainText } from './markdownTableParser'
 
-export type BlockCommand = 'paragraph' | 'table'
+export type BlockCommand = 'paragraph' | 'table' | 'bullet-list' | 'numbered-list'
 export type DeleteCommand = 'delete-block'
 export type TableCommand
   = | 'add-row-before'
@@ -28,6 +28,8 @@ interface UseBlockCommandsOptions {
 const menuCommands = new Set<MenuCommand>([
   'paragraph',
   'table',
+  'bullet-list',
+  'numbered-list',
   'delete-block',
   'add-row-before',
   'add-row-after',
@@ -138,6 +140,31 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
     }
   }
 
+  function createListNode(text: string, listType: 'bulletList' | 'orderedList') {
+    const lines = text.split('\n')
+    const listItems = lines.map((line) => {
+      const paragraphContent = line
+        ? [{
+            type: 'text',
+            text: line,
+          }]
+        : []
+
+      return {
+        type: 'listItem',
+        content: [{
+          type: 'paragraph',
+          content: paragraphContent,
+        }],
+      }
+    })
+
+    return {
+      type: listType,
+      content: listItems,
+    }
+  }
+
   function executeTurnIntoCommand(command: BlockCommand) {
     const currentEditor = editor.value
     const pos = menuTargetBlockPos.value
@@ -166,7 +193,7 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
 
       currentEditor.commands.setTextSelection(from + 4)
     }
-    else {
+    else if (command === 'paragraph') {
       const paragraphText = node.type.name === 'table'
         ? rowsToPlainText(getTableNodeRows(node))
         : node.textContent
@@ -179,6 +206,21 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
         .run()
 
       currentEditor.commands.setTextSelection(from + 1)
+    }
+    else {
+      const listText = node.type.name === 'table'
+        ? rowsToPlainText(getTableNodeRows(node))
+        : getNodeTextWithHardBreaks(node)
+      const listType = command === 'bullet-list' ? 'bulletList' : 'orderedList'
+
+      currentEditor
+        .chain()
+        .focus()
+        .deleteRange({ from, to })
+        .insertContentAt(from, createListNode(listText, listType))
+        .run()
+
+      currentEditor.commands.setTextSelection(from + 3)
     }
   }
 
@@ -282,8 +324,14 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
       if (command === 'table') {
         chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true })
       }
-      else {
+      else if (command === 'paragraph') {
         chain.setParagraph()
+      }
+      else if (command === 'bullet-list') {
+        chain.toggleBulletList()
+      }
+      else {
+        chain.toggleOrderedList()
       }
 
       chain.run()
@@ -294,9 +342,15 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
       if (command === 'table') {
         currentEditor.chain().focus().setTextSelection(insertPos).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
       }
-      else {
+      else if (command === 'paragraph') {
         currentEditor.chain().focus().insertContentAt(insertPos, { type: 'paragraph' }).run()
         currentEditor.commands.setTextSelection(insertPos + 1)
+      }
+      else {
+        const listType = command === 'bullet-list' ? 'bulletList' : 'orderedList'
+
+        currentEditor.chain().focus().insertContentAt(insertPos, createListNode('', listType)).run()
+        currentEditor.commands.setTextSelection(insertPos + 3)
       }
     }
   }

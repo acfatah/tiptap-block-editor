@@ -4,6 +4,8 @@ import {
   BetweenHorizontalStart,
   BetweenVerticalEnd,
   BetweenVerticalStart,
+  List,
+  ListOrdered,
   Pilcrow,
   Table2,
   Trash2,
@@ -79,6 +81,14 @@ const emit = defineEmits<{
         >
           <Table2 />
           Table
+        </DropdownMenuItem>
+        <DropdownMenuItem value="bullet-list">
+          <List />
+          Bullet list
+        </DropdownMenuItem>
+        <DropdownMenuItem value="numbered-list">
+          <ListOrdered />
+          Numbered list
         </DropdownMenuItem>
       </DropdownMenuGroup>
 

@@ -30,8 +30,23 @@ function createChain(calls: Array<[string, unknown?]>) {
 
       return chain
     },
+    toggleBulletList() {
+      calls.push(['toggleBulletList'])
+
+      return chain
+    },
+    toggleOrderedList() {
+      calls.push(['toggleOrderedList'])
+
+      return chain
+    },
     insertTable(options: unknown) {
       calls.push(['insertTable', options])
+
+      return chain
+    },
+    setTextSelection(pos: number) {
+      calls.push(['chain.setTextSelection', pos])
 
       return chain
     },
@@ -228,5 +243,133 @@ describe('useBlockCommands delete command', () => {
     const deleteCall = calls.find(([name]) => name === 'deleteRange')
     expect(deleteCall).toBeDefined()
     expect(deleteCall?.[1]).toEqual({ from: 12, to: 18 })
+  })
+})
+
+describe('useBlockCommands list commands', () => {
+  it('runs bullet list command from slash source', () => {
+    const calls: Array<[string, unknown?]> = []
+    const node = {
+      nodeSize: 6,
+      textContent: 'Hello',
+      type: { name: 'paragraph' },
+    }
+
+    const editor = ref(createEditor(node, calls) as any)
+    const slashRange = ref({ from: 3, to: 5 })
+    const slashMenuSource = ref('slash' as const)
+    const menuTargetBlockPos = ref(null)
+
+    const { executeMenuCommand } = useBlockCommands({
+      editor,
+      slashRange,
+      slashMenuSource,
+      menuTargetBlockPos,
+    })
+
+    executeMenuCommand('bullet-list')
+
+    expect(calls).toContainEqual(['deleteRange', { from: 3, to: 5 }])
+    expect(calls).toContainEqual(['toggleBulletList'])
+  })
+
+  it('inserts numbered list block below target block', () => {
+    const calls: Array<[string, unknown?]> = []
+    const node = {
+      nodeSize: 6,
+      textContent: 'Hello',
+      type: { name: 'paragraph' },
+    }
+
+    const editor = ref(createEditor(node, calls) as any)
+    const slashRange = ref(null)
+    const slashMenuSource = ref('insert' as const)
+    const menuTargetBlockPos = ref(12)
+
+    const { executeMenuCommand } = useBlockCommands({
+      editor,
+      slashRange,
+      slashMenuSource,
+      menuTargetBlockPos,
+    })
+
+    executeMenuCommand('numbered-list')
+
+    const insertCall = calls.find(([name]) => name === 'insertContentAt')
+    expect(insertCall).toBeDefined()
+
+    const payload = insertCall?.[1] as { pos: number, content: any }
+    expect(payload.pos).toBe(18)
+    expect(payload.content.type).toBe('orderedList')
+    expect(payload.content.content).toEqual([
+      {
+        type: 'listItem',
+        content: [
+          {
+            type: 'paragraph',
+            content: [],
+          },
+        ],
+      },
+    ])
+  })
+
+  it('converts table node into bullet list items', () => {
+    const calls: Array<[string, unknown?]> = []
+    const row1 = {
+      childCount: 2,
+      child: (index: number) => [{ textContent: 'H1' }, { textContent: 'H2' }][index],
+    }
+    const row2 = {
+      childCount: 2,
+      child: (index: number) => [{ textContent: 'v1' }, { textContent: 'v2' }][index],
+    }
+    const node = {
+      nodeSize: 30,
+      textContent: 'H1H2v1v2',
+      type: { name: 'table' },
+      childCount: 2,
+      child: (index: number) => [row1, row2][index],
+    }
+
+    const editor = ref(createEditor(node, calls) as any)
+    const slashRange = ref(null)
+    const slashMenuSource = ref('turn-into' as const)
+    const menuTargetBlockPos = ref(7)
+
+    const { executeMenuCommand } = useBlockCommands({
+      editor,
+      slashRange,
+      slashMenuSource,
+      menuTargetBlockPos,
+    })
+
+    executeMenuCommand('bullet-list')
+
+    const insertCall = calls.find(([name]) => name === 'insertContentAt')
+    expect(insertCall).toBeDefined()
+
+    const payload = insertCall?.[1] as { content: any }
+    expect(payload.content.type).toBe('bulletList')
+    expect(payload.content.content).toEqual([
+      {
+        type: 'listItem',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'H1\tH2' }],
+          },
+        ],
+      },
+      {
+        type: 'listItem',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'v1\tv2' }],
+          },
+        ],
+      },
+    ])
   })
 })

@@ -2,6 +2,10 @@ import '@tiptap/core'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
+    list: {
+      toggleBulletList: () => ReturnType
+      toggleOrderedList: () => ReturnType
+    }
     paragraph: {
       setParagraph: () => ReturnType
     }
