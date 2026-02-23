@@ -1,6 +1,6 @@
 {
   "name": "tiptap-block-editor",
-  "compatibility_date": "2026-02-17",
+  "compatibility_date": "2026-02-23",
   "assets": {
     "directory": "./dist"
   }
