@@ -272,7 +272,22 @@ function onEditorKeyDown(event: KeyboardEvent) {
     return true
   }
 
-  currentEditor.chain().focus().insertContent('\t').run()
+  if (currentEditor.isActive('bulletList') || currentEditor.isActive('orderedList')) {
+    if (event.shiftKey) {
+      currentEditor.commands.liftListItem('listItem')
+    }
+    else {
+      currentEditor.commands.sinkListItem('listItem')
+    }
+
+    return true
+  }
+
+  if (currentEditor.isActive('paragraph') || currentEditor.isActive('codeBlock')) {
+    currentEditor.chain().focus().insertContent('\t').run()
+
+    return true
+  }
 
   return true
 }
@@ -500,6 +515,9 @@ onMounted(() => {
   --handle-size: 1.5rem;
   --handle-gap: 0.25rem;
   position: relative;
+
+  /* Preserve tabs */
+  white-space: pre-wrap;
 }
 
 .editor-content :deep(.ProseMirror) {
@@ -522,7 +540,40 @@ onMounted(() => {
 }
 
 .editor-content :deep(.ProseMirror ol) {
-  list-style-type: decimal;
+  --ordered-marker-width: 2.4rem;
+  list-style: none;
+  padding-left: var(--ordered-marker-width);
+  counter-reset: list-item;
+}
+
+.editor-content :deep(.ProseMirror ol li) {
+  counter-increment: list-item;
+  position: relative;
+}
+
+.editor-content :deep(.ProseMirror ol li::before) {
+  content: counters(list-item, '.') '. ';
+  position: absolute;
+  left: calc(var(--ordered-marker-width) * -1);
+  width: calc(var(--ordered-marker-width) - 0.3rem);
+  text-align: right;
+}
+
+.editor-content :deep(.ProseMirror ol ol),
+.editor-content :deep(.ProseMirror ol ol ol) {
+  list-style: none;
+  padding-left: var(--ordered-marker-width);
+  counter-reset: list-item;
+}
+
+.editor-content :deep(.ProseMirror ol ol ol ol) {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  counter-reset: none;
+}
+
+.editor-content :deep(.ProseMirror ol ol ol ol li::before) {
+  content: none;
 }
 
 .editor-content :deep(.ProseMirror li) {
