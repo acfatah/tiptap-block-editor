@@ -2,7 +2,7 @@
 import { watchDebounced } from '@vueuse/core'
 import { ref } from 'vue'
 
-import BlockEditor from '@/components/BlockEditor.vue'
+import { BlockEditor } from '@/components/block-editor'
 
 import sample from './sample.txt?raw'
 

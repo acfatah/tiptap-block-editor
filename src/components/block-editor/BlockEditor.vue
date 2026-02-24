@@ -260,6 +260,7 @@ function onEditorKeyDown(event: KeyboardEvent) {
   }
 
   event.preventDefault()
+  
 
   if (currentEditor.isActive('table')) {
     if (event.shiftKey) {
