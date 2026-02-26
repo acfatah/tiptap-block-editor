@@ -502,6 +502,7 @@ onMounted(() => {
   left: calc(var(--ordered-marker-width) * -1);
   width: calc(var(--ordered-marker-width) - 0.3rem);
   text-align: right;
+  white-space: nowrap;
 }
 
 .editor-content :deep(.ProseMirror ol ol),
@@ -509,6 +510,10 @@ onMounted(() => {
   list-style: none;
   padding-left: var(--ordered-marker-width);
   counter-reset: list-item;
+}
+
+.editor-content :deep(.ProseMirror ol ol li::before) {
+  content: counters(list-item, '.') ' ';
 }
 
 .editor-content :deep(.ProseMirror ol ol ol ol) {
