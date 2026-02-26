@@ -615,6 +615,7 @@ onMounted(() => {
 .editor-content :deep(.ProseMirror td) {
   border: 1px solid var(--border);
   padding: 0.4rem 0.5rem;
+  position: relative;
   vertical-align: top;
 }
 
@@ -637,6 +638,22 @@ onMounted(() => {
 .editor-content :deep(.ProseMirror th.selectedCell) {
   background: color-mix(in srgb, var(--primary) 18%, transparent);
   box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+.editor-content :deep(.ProseMirror .column-resize-handle) {
+  background-color: var(--primary);
+  bottom: 0;
+  pointer-events: none;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 4px;
+  z-index: 20;
+}
+
+.editor-content :deep(.ProseMirror.resize-cursor),
+.editor-content :deep(.ProseMirror.resize-cursor *) {
+  cursor: col-resize !important;
 }
 
 .editor-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {
