@@ -7,7 +7,7 @@ import { Table } from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
-import { NodeSelection } from '@tiptap/pm/state'
+import { NodeSelection, TextSelection } from '@tiptap/pm/state'
 import { CellSelection } from '@tiptap/pm/tables'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
@@ -123,6 +123,16 @@ const editor = useEditor({
 
     selectionTick.value += 1
   },
+  onTransaction: ({ transaction }) => {
+    if (transaction.getMeta('history$')) {
+      const currentEditor = editor.value
+      if (currentEditor) {
+        requestAnimationFrame(() => {
+          currentEditor.commands.focus()
+        })
+      }
+    }
+  },
   onCreate: () => {
     const currentEditor = editor.value
     if (!currentEditor)
@@ -229,7 +239,18 @@ function onGlobalMouseUp() {
 }
 
 function shouldShowBubbleMenuForSelection() {
-  return shouldShowBubbleMenu.value
+  const currentEditor = editor.value
+  const isTextSelection = currentEditor?.state.selection instanceof TextSelection
+
+  if (!currentEditor || isDragging.value || currentEditor.state.selection.empty || !isTextSelection) {
+    return false
+  }
+
+  if (currentEditor.state.selection instanceof NodeSelection) {
+    return false
+  }
+
+  return !isTableCellSelection(currentEditor)
 }
 
 function onEditorPaste(event: ClipboardEvent) {
