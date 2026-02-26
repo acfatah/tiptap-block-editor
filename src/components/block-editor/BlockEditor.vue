@@ -7,12 +7,9 @@ import { Table } from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
-import { NodeSelection, TextSelection } from '@tiptap/pm/state'
 import { CellSelection } from '@tiptap/pm/tables'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
-import { BubbleMenu } from '@tiptap/vue-3/menus'
-import { Bold, Italic, Strikethrough, Underline as UnderlineIcon } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import BlockHandleButtons from '@/components/block-editor/BlockHandleButtons.vue'
@@ -21,9 +18,9 @@ import { isMenuCommand, useBlockCommands } from '@/components/block-editor/compo
 import { useSlashMenu } from '@/components/block-editor/composables/useSlashMenu'
 import { useTableEdgeControls } from '@/components/block-editor/composables/useTableEdgeControls'
 import { ActiveTableCell } from '@/components/block-editor/extensions/activeTableCell'
+import FormatingMenu from '@/components/block-editor/FormatingMenu.vue'
 import SlashMenu from '@/components/block-editor/SlashMenu.vue'
 import TableEdgeControls from '@/components/block-editor/TableEdgeControls.vue'
-import { ToggleGroup } from '@/components/ui/toggle-group'
 
 const props = defineProps<{
   modelValue: string
@@ -36,19 +33,11 @@ const emit = defineEmits<{
 
 const hoveredBlockPos = ref<number | null>(null)
 const blockEditorElement = ref<HTMLElement | null>(null)
+const formatingMenuRef = ref<InstanceType<typeof FormatingMenu> | null>(null)
 const selectionTick = ref(0)
 const isMouseDownInEditor = ref(false)
 const shouldOpenTableMenuOnMouseUp = ref(false)
 const isDragging = ref(false)
-
-const bubbleMenuItems = [
-  { value: 'bold', label: 'Bold', icon: Bold },
-  { value: 'italic', label: 'Italic', icon: Italic },
-  { value: 'underline', label: 'Underline', icon: UnderlineIcon },
-  { value: 'strike', label: 'Strikethrough', icon: Strikethrough },
-]
-
-type MarkValue = (typeof bubbleMenuItems)[number]['value']
 
 const {
   slashMenuOpen,
@@ -145,36 +134,9 @@ const editor = useEditor({
   },
 })
 
-const activeMarks = computed(() => {
-  const selectionKey = selectionTick.value
-  const currentEditor = editor.value
-
-  if (!currentEditor || selectionKey < 0) {
-    return []
-  }
-
-  return bubbleMenuItems
-    .map(item => item.value)
-    .filter(value => currentEditor.isActive(value))
-})
-
-const shouldShowBubbleMenu = computed(() => {
-  const selectionKey = selectionTick.value
-  const currentEditor = editor.value
-
-  if (!currentEditor || selectionKey < 0 || isDragging.value || currentEditor.state.selection.empty) {
-    return false
-  }
-
-  if (currentEditor.state.selection instanceof NodeSelection) {
-    return false
-  }
-
-  return !isTableCellSelection(currentEditor)
-})
-
 const isAnyMenuOpen = computed(() => {
-  return slashMenuOpen.value || shouldShowBubbleMenu.value
+  return slashMenuOpen.value
+    || (formatingMenuRef.value?.shouldShowBubbleMenu ?? false)
 })
 
 function isTableRowOrColumnSelection(currentEditor: NonNullable<typeof editor.value>) {
@@ -185,10 +147,6 @@ function isTableRowOrColumnSelection(currentEditor: NonNullable<typeof editor.va
   }
 
   return selection.isRowSelection() || selection.isColSelection()
-}
-
-function isTableCellSelection(currentEditor: NonNullable<typeof editor.value>) {
-  return currentEditor.state.selection instanceof CellSelection
 }
 
 function maybeOpenSlashMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
@@ -236,21 +194,6 @@ function onGlobalMouseUp() {
   }
 
   maybeOpenSlashMenuForTableSelection(currentEditor)
-}
-
-function shouldShowBubbleMenuForSelection() {
-  const currentEditor = editor.value
-  const isTextSelection = currentEditor?.state.selection instanceof TextSelection
-
-  if (!currentEditor || isDragging.value || currentEditor.state.selection.empty || !isTextSelection) {
-    return false
-  }
-
-  if (currentEditor.state.selection instanceof NodeSelection) {
-    return false
-  }
-
-  return !isTableCellSelection(currentEditor)
 }
 
 function onEditorPaste(event: ClipboardEvent) {
@@ -357,32 +300,6 @@ const { executeMenuCommand } = useBlockCommands({
   menuTargetBlockPos,
 })
 
-function toggleMark(mark: MarkValue) {
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return
-  }
-
-  const commandChain = currentEditor.chain().focus()
-
-  switch (mark) {
-    case 'bold':
-      commandChain.toggleBold()
-      break
-    case 'italic':
-      commandChain.toggleItalic()
-      break
-    case 'underline':
-      commandChain.toggleUnderline()
-      break
-    case 'strike':
-      commandChain.toggleStrike()
-      break
-  }
-
-  commandChain.run()
-}
-
 function onNodeChange(data: { node: ProseMirrorNode | null, pos: number }) {
   hoveredBlockPos.value = data?.node ? data.pos : null
 }
@@ -486,35 +403,13 @@ onMounted(() => {
     @mouseleave="resetTableEdgeButtons"
   >
     <EditorContent :editor="editor" class="editor-content" />
-    <BubbleMenu
+    <FormatingMenu
       v-if="editor"
+      ref="formatingMenuRef"
       :editor="editor"
-      :tippy-options="{ duration: 120, placement: 'top' }"
-      :should-show="shouldShowBubbleMenuForSelection"
-    >
-      <div
-        class="rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-      >
-        <ToggleGroup.Root
-          :model-value="activeMarks"
-          multiple
-          size="sm"
-          variant="default"
-          :spacing="4"
-        >
-          <ToggleGroup.Item
-            v-for="item in bubbleMenuItems"
-            :key="item.value"
-            :value="item.value"
-            type="button"
-            :aria-label="item.label"
-            @click="toggleMark(item.value)"
-          >
-            <component :is="item.icon" />
-          </ToggleGroup.Item>
-        </ToggleGroup.Root>
-      </div>
-    </BubbleMenu>
+      :selection-tick="selectionTick"
+      :is-dragging="isDragging"
+    />
     <SlashMenu
       :open="slashMenuOpen"
       :highlighted-value="slashMenuHighlightedValue"
