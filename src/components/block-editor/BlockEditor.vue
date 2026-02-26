@@ -7,6 +7,7 @@ import { Table } from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
+import { NodeSelection } from '@tiptap/pm/state'
 import { CellSelection } from '@tiptap/pm/tables'
 import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
@@ -38,6 +39,7 @@ const blockEditorElement = ref<HTMLElement | null>(null)
 const selectionTick = ref(0)
 const isMouseDownInEditor = ref(false)
 const shouldOpenTableMenuOnMouseUp = ref(false)
+const isDragging = ref(false)
 
 const bubbleMenuItems = [
   { value: 'bold', label: 'Bold', icon: Bold },
@@ -150,7 +152,11 @@ const shouldShowBubbleMenu = computed(() => {
   const selectionKey = selectionTick.value
   const currentEditor = editor.value
 
-  if (!currentEditor || selectionKey < 0 || currentEditor.state.selection.empty) {
+  if (!currentEditor || selectionKey < 0 || isDragging.value || currentEditor.state.selection.empty) {
+    return false
+  }
+
+  if (currentEditor.state.selection instanceof NodeSelection) {
     return false
   }
 
@@ -360,7 +366,13 @@ function onNodeChange(data: { node: ProseMirrorNode | null, pos: number }) {
   hoveredBlockPos.value = data?.node ? data.pos : null
 }
 
+function onElementDragStart() {
+  isDragging.value = true
+}
+
 function onElementDragEnd() {
+  isDragging.value = false
+
   const currentEditor = editor.value
   if (!currentEditor) {
     return
@@ -502,6 +514,7 @@ onMounted(() => {
       :editor="editor"
       class="z-20 flex -translate-x-[0.35rem] gap-(--handle-gap)"
       :compute-position-config="{ placement: 'left-start', middleware: [] }"
+      :on-element-drag-start="onElementDragStart"
       :on-element-drag-end="onElementDragEnd"
       :on-node-change="onNodeChange"
     >
