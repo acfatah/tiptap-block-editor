@@ -1,16 +1,20 @@
 <p>Highlight any word to trigger the formatting menu.</p>
-<p>2.			This is paragraph has tabs after the numbering. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-<p>3.    This is paragraph with number. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+<p>Press Tab inside a paragraph to insert indentation (4 non-breaking spaces).</p>
+<p>Tab demo:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This sentence starts after two tab-indents.</p>
 <ol>
   <li>First item</li>
-  <li>Second item</li>
+  <li>
+    Second item
     <ol>
-      <li>Nested item 2</li>
-      <ol>
-        <li>Nested item 2.1.1</li>
-        <li>Nested item 2.1.2</li>
-      </ol>
+      <li>
+        Nested item 2
+        <ol>
+          <li>Nested item 2.1.1</li>
+          <li>Nested item 2.1.2</li>
+        </ol>
+      </li>
     </ol>
+  </li>
   <li>Third item</li>
 </ol>
 <table>
@@ -35,3 +39,5 @@
   </tbody>
 </table>
 <p>Try to paste data copied from a spreadsheet or a Markdown table.</p>
+<p></p>
+

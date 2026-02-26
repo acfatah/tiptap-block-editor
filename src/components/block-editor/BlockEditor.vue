@@ -255,14 +255,17 @@ function onEditorPaste(event: ClipboardEvent) {
 function onEditorKeyDown(event: KeyboardEvent) {
   const currentEditor = editor.value
 
-  if (!currentEditor || event.key !== 'Tab') {
+  if (!currentEditor) {
     return false
   }
 
-  event.preventDefault()
-  
+  if (event.key !== 'Tab') {
+    return false
+  }
 
   if (currentEditor.isActive('table')) {
+    event.preventDefault()
+
     if (event.shiftKey) {
       currentEditor.commands.goToPreviousCell()
     }
@@ -274,6 +277,8 @@ function onEditorKeyDown(event: KeyboardEvent) {
   }
 
   if (currentEditor.isActive('bulletList') || currentEditor.isActive('orderedList')) {
+    event.preventDefault()
+
     if (event.shiftKey) {
       currentEditor.commands.liftListItem('listItem')
     }
@@ -285,12 +290,15 @@ function onEditorKeyDown(event: KeyboardEvent) {
   }
 
   if (currentEditor.isActive('paragraph') || currentEditor.isActive('codeBlock')) {
-    currentEditor.chain().focus().insertContent('\t').run()
+    event.preventDefault()
+
+    // Insert 4 non-breaking spaces as portable tab representation
+    currentEditor.chain().focus().insertContent('\u00A0\u00A0\u00A0\u00A0').run()
 
     return true
   }
 
-  return true
+  return false
 }
 
 const {
@@ -516,14 +524,16 @@ onMounted(() => {
   --handle-size: 1.5rem;
   --handle-gap: 0.25rem;
   position: relative;
-
-  /* Preserve tabs */
-  white-space: pre-wrap;
 }
 
 .editor-content :deep(.ProseMirror) {
   min-height: 12rem;
   padding-left: var(--block-gutter);
+}
+
+.editor-content :deep(.ProseMirror.simple-editor) {
+  white-space: pre-wrap;
+  tab-size: 4;
 }
 
 .editor-content :deep(.ProseMirror > *) {
