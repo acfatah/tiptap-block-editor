@@ -2,6 +2,7 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 
 import { DragHandle } from '@tiptap/extension-drag-handle-vue-3'
+import Placeholder from '@tiptap/extension-placeholder'
 import { Table } from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
@@ -25,6 +26,7 @@ import { ToggleGroup } from '@/components/ui/toggle-group'
 
 const props = defineProps<{
   modelValue: string
+  placeholder?: string
 }>()
 
 const emit = defineEmits<{
@@ -73,6 +75,9 @@ const editor = useEditor({
   content: props.modelValue,
   extensions: [
     StarterKit,
+    Placeholder.configure({
+      placeholder: props.placeholder ?? '',
+    }),
     ActiveTableCell,
     Table.configure({
       resizable: true,
@@ -632,5 +637,13 @@ onMounted(() => {
 .editor-content :deep(.ProseMirror th.selectedCell) {
   background: color-mix(in srgb, var(--primary) 18%, transparent);
   box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+.editor-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {
+  color: var(--muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
 }
 </style>

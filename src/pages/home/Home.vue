@@ -16,6 +16,6 @@ watchDebounced(value, (newValue) => {
 
 <template>
   <main class="mx-auto mt-16 flex min-h-screen max-w-lg flex-1 flex-col">
-    <BlockEditor v-model="value" />
+    <BlockEditor v-model="value" placeholder="Type '/' to insert blocks" />
   </main>
 </template>
