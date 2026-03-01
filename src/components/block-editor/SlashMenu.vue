@@ -1,54 +1,114 @@
 <script setup lang="ts">
+import type { Editor } from '@tiptap/vue-3'
+
 import {
-  BetweenHorizontalEnd,
-  BetweenHorizontalStart,
-  BetweenVerticalEnd,
-  BetweenVerticalStart,
   List,
   ListOrdered,
   Pilcrow,
   Table2,
-  Trash2,
 } from 'lucide-vue-next'
+import { onBeforeUnmount, toRef } from 'vue'
 
+import { isMenuCommand, useBlockCommands } from '@/components/block-editor/composables/useBlockCommands'
+import { useSlashMenu } from '@/components/block-editor/composables/useSlashMenu'
+import TableActionsMenu from '@/components/block-editor/TableActionsMenu.vue'
 import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRoot,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-interface SlashMenuProps {
-  open: boolean
-  highlightedValue: string | null
-  anchorStyle: Record<string, string>
-  isTableMenuVisible: boolean
-  isTableActionsEnabled: boolean
-  canDeleteTableRow: boolean
-  canDeleteTableColumn: boolean
-  menuLabel: string
-  menuSource: 'slash' | 'insert' | 'turn-into' | null
+const props = defineProps<{
+  editor: Editor
+}>()
+
+const editorRef = toRef(props, 'editor')
+
+const {
+  slashMenuOpen,
+  slashMenuAnchorStyle,
+  slashRange,
+  slashMenuHighlightedValue,
+  isTableActionsEnabled,
+  canDeleteTableRow,
+  canDeleteTableColumn,
+  syncMenuState,
+  syncSlashMenu,
+  onSlashMenuOpenChange,
+  onSlashMenuHighlightedValueChange,
+  closeMenu,
+} = useSlashMenu()
+
+const { executeMenuCommand } = useBlockCommands({ editor: editorRef })
+
+function onEditorUpdate() {
+  syncMenuState(props.editor)
+  syncSlashMenu(props.editor)
 }
 
-const props = defineProps<SlashMenuProps>()
+function onEditorSelectionUpdate() {
+  syncMenuState(props.editor)
+  syncSlashMenu(props.editor)
+}
 
-const emit = defineEmits<{
-  (event: 'update:open', value: boolean): void
-  (event: 'update:highlighted-value', value: string | null): void
-  (event: 'select', details: { value: string }): void
-}>()
+props.editor.on('update', onEditorUpdate)
+props.editor.on('selectionUpdate', onEditorSelectionUpdate)
+props.editor.on('create', onEditorUpdate)
+
+onBeforeUnmount(() => {
+  props.editor.off('update', onEditorUpdate)
+  props.editor.off('selectionUpdate', onEditorSelectionUpdate)
+  props.editor.off('create', onEditorUpdate)
+})
+
+function onOpenChange(open: boolean) {
+  const range = slashRange.value
+
+  onSlashMenuOpenChange(open)
+
+  if (open) {
+    return
+  }
+
+  requestAnimationFrame(() => {
+    props.editor.commands.focus()
+
+    if (range) {
+      props.editor.commands.setTextSelection(range.to)
+    }
+  })
+}
+
+function onSelect(details: { value: string }) {
+  if (!isMenuCommand(details.value)) {
+    return
+  }
+
+  executeMenuCommand(details.value, {
+    source: 'slash',
+    slashRange: slashRange.value,
+    targetBlockPos: null,
+  })
+
+  closeMenu()
+}
+
+defineExpose({
+  isOpen: slashMenuOpen,
+  close: closeMenu,
+})
 </script>
 
 <template>
   <DropdownMenuRoot
-    :open="props.open"
-    :highlighted-value="props.highlightedValue"
-    @update:open="emit('update:open', $event)"
-    @update:highlighted-value="emit('update:highlighted-value', $event)"
-    @select="emit('select', $event)"
+    :open="slashMenuOpen"
+    :highlighted-value="slashMenuHighlightedValue ?? undefined"
+    @update:open="onOpenChange"
+    @update:highlighted-value="onSlashMenuHighlightedValueChange"
+    @select="onSelect"
   >
     <DropdownMenuTrigger as-child>
       <button
@@ -56,29 +116,20 @@ const emit = defineEmits<{
         aria-hidden="true"
         tabindex="-1"
         class="pointer-events-none fixed z-30 size-px opacity-0"
-        :style="props.anchorStyle"
+        :style="slashMenuAnchorStyle"
       />
     </DropdownMenuTrigger>
 
     <DropdownMenuContent
-      side="bottom" align="start" class="
-        w-44
-        data-[side=bottom]:-mt-3
-      "
+      class="w-44"
     >
       <DropdownMenuGroup>
-        <DropdownMenuLabel>{{ props.menuLabel }}</DropdownMenuLabel>
-        <DropdownMenuItem
-          v-if="props.menuSource !== 'turn-into' || props.isTableMenuVisible"
-          value="paragraph"
-        >
+        <DropdownMenuLabel>Insert</DropdownMenuLabel>
+        <DropdownMenuItem value="paragraph">
           <Pilcrow />
           Paragraph
         </DropdownMenuItem>
-        <DropdownMenuItem
-          v-if="props.menuSource !== 'turn-into' || !props.isTableMenuVisible"
-          value="table"
-        >
+        <DropdownMenuItem value="table">
           <Table2 />
           Table
         </DropdownMenuItem>
@@ -92,46 +143,11 @@ const emit = defineEmits<{
         </DropdownMenuItem>
       </DropdownMenuGroup>
 
-      <template v-if="props.menuSource !== 'slash'">
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem value="delete-block">
-            <Trash2 />
-            Remove
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </template>
-
-      <template v-if="props.isTableActionsEnabled">
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Table</DropdownMenuLabel>
-          <DropdownMenuItem value="add-row-before">
-            <BetweenHorizontalStart class="[&>rect:first-of-type]:stroke-primary" />
-            Add Row Above
-          </DropdownMenuItem>
-          <DropdownMenuItem value="add-row-after">
-            <BetweenHorizontalEnd class="[&>rect:last-of-type]:stroke-primary" />
-            Add Row Below
-          </DropdownMenuItem>
-          <DropdownMenuItem v-if="props.canDeleteTableRow" value="delete-row">
-            <Trash2 />
-            Delete Row
-          </DropdownMenuItem>
-          <DropdownMenuItem value="add-column-before">
-            <BetweenVerticalStart class="[&>rect:first-of-type]:stroke-primary" />
-            Add Column Left
-          </DropdownMenuItem>
-          <DropdownMenuItem value="add-column-after">
-            <BetweenVerticalEnd class="[&>rect:last-of-type]:stroke-primary" />
-            Add Column Right
-          </DropdownMenuItem>
-          <DropdownMenuItem v-if="props.canDeleteTableColumn" value="delete-column">
-            <Trash2 />
-            Delete Column
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </template>
+      <TableActionsMenu
+        :is-enabled="isTableActionsEnabled"
+        :can-delete-row="canDeleteTableRow"
+        :can-delete-column="canDeleteTableColumn"
+      />
     </DropdownMenuContent>
   </DropdownMenuRoot>
 </template>

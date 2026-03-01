@@ -3,8 +3,6 @@ import type { Ref } from 'vue'
 
 import { isInTable } from '@tiptap/pm/tables'
 
-import type { SlashMenuSource, SlashRange } from './useSlashMenu'
-
 import { createTableNodeContent, parseTableText, rowsToPlainText } from './markdownTableParser'
 
 export type BlockCommand = 'paragraph' | 'table' | 'bullet-list' | 'numbered-list'
@@ -18,11 +16,14 @@ export type TableCommand
     | 'delete-column'
 export type MenuCommand = BlockCommand | TableCommand | DeleteCommand
 
+export interface MenuCommandContext {
+  source: 'slash' | 'insert' | 'turn-into'
+  slashRange: { from: number, to: number } | null
+  targetBlockPos: number | null
+}
+
 interface UseBlockCommandsOptions {
   editor: Ref<Editor | null | undefined>
-  slashRange: Ref<SlashRange>
-  slashMenuSource: Ref<SlashMenuSource>
-  menuTargetBlockPos: Ref<number | null>
 }
 
 const menuCommands = new Set<MenuCommand>([
@@ -43,7 +44,7 @@ export function isMenuCommand(value: string): value is MenuCommand {
   return menuCommands.has(value as MenuCommand)
 }
 
-export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTargetBlockPos }: UseBlockCommandsOptions) {
+export function useBlockCommands({ editor }: UseBlockCommandsOptions) {
   function getNodeTextWithHardBreaks(node: { toJSON?: () => unknown, textContent: string }) {
     const nodeJson = node.toJSON?.() as
       | {
@@ -165,21 +166,20 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
     }
   }
 
-  function executeTurnIntoCommand(command: BlockCommand) {
+  function executeTurnIntoCommand(command: BlockCommand, targetBlockPos: number | null) {
     const currentEditor = editor.value
-    const pos = menuTargetBlockPos.value
 
-    if (!currentEditor || pos === null) {
+    if (!currentEditor || targetBlockPos === null) {
       return
     }
 
-    const node = currentEditor.state.doc.nodeAt(pos)
+    const node = currentEditor.state.doc.nodeAt(targetBlockPos)
     if (!node) {
       return
     }
 
-    const from = pos
-    const to = pos + node.nodeSize
+    const from = targetBlockPos
+    const to = targetBlockPos + node.nodeSize
 
     if (command === 'table') {
       const parsedTable = parseTableText(getNodeTextWithHardBreaks(node))
@@ -256,9 +256,9 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
     }
   }
 
-  function resolveDeleteBlockPos(currentEditor: Editor) {
-    if (menuTargetBlockPos.value !== null) {
-      return menuTargetBlockPos.value
+  function resolveDeleteBlockPos(currentEditor: Editor, targetBlockPos: number | null) {
+    if (targetBlockPos !== null) {
+      return targetBlockPos
     }
 
     const { $from } = currentEditor.state.selection
@@ -269,13 +269,13 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
     return $from.before(1)
   }
 
-  function executeDeleteCommand() {
+  function executeDeleteCommand(targetBlockPos: number | null) {
     const currentEditor = editor.value
     if (!currentEditor) {
       return
     }
 
-    const pos = resolveDeleteBlockPos(currentEditor)
+    const pos = resolveDeleteBlockPos(currentEditor, targetBlockPos)
     if (pos === null) {
       return
     }
@@ -292,34 +292,31 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
       .run()
   }
 
-  function getHoveredBlockInsertPos(currentEditor: Editor) {
-    const pos = menuTargetBlockPos.value
-
-    if (pos === null) {
-      return null
+  function getInsertPos(currentEditor: Editor, targetBlockPos: number | null) {
+    if (targetBlockPos === null) {
+      return currentEditor.state.selection.from
     }
 
-    const node = currentEditor.state.doc.nodeAt(pos)
+    const node = currentEditor.state.doc.nodeAt(targetBlockPos)
     if (!node) {
-      return null
+      return currentEditor.state.selection.from
     }
 
-    return pos + node.nodeSize
+    return targetBlockPos + node.nodeSize
   }
 
-  function executeBlockCommand(command: BlockCommand) {
+  function executeBlockCommand(command: BlockCommand, context: MenuCommandContext) {
     const currentEditor = editor.value
-    const range = slashRange.value
 
     if (!currentEditor) {
       return
     }
 
-    if (slashMenuSource.value === 'turn-into') {
-      executeTurnIntoCommand(command)
+    if (context.source === 'turn-into') {
+      executeTurnIntoCommand(command, context.targetBlockPos)
     }
-    else if (range) {
-      const chain = currentEditor.chain().focus().deleteRange(range)
+    else if (context.slashRange) {
+      const chain = currentEditor.chain().focus().deleteRange(context.slashRange)
 
       if (command === 'table') {
         chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true })
@@ -337,7 +334,7 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
       chain.run()
     }
     else {
-      const insertPos = getHoveredBlockInsertPos(currentEditor) ?? currentEditor.state.selection.from
+      const insertPos = getInsertPos(currentEditor, context.targetBlockPos)
 
       if (command === 'table') {
         currentEditor.chain().focus().setTextSelection(insertPos).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
@@ -355,7 +352,7 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
     }
   }
 
-  function executeMenuCommand(command: MenuCommand) {
+  function executeMenuCommand(command: MenuCommand, context: MenuCommandContext) {
     if (
       command === 'add-row-before'
       || command === 'add-row-after'
@@ -367,10 +364,10 @@ export function useBlockCommands({ editor, slashRange, slashMenuSource, menuTarg
       executeTableCommand(command)
     }
     else if (command === 'delete-block') {
-      executeDeleteCommand()
+      executeDeleteCommand(context.targetBlockPos)
     }
     else {
-      executeBlockCommand(command)
+      executeBlockCommand(command, context)
     }
   }
 

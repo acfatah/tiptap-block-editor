@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { ref } from 'vue'
 
+import type { MenuCommandContext } from './useBlockCommands'
+
 import { useBlockCommands } from './useBlockCommands'
 
 function createChain(calls: Array<[string, unknown?]>) {
@@ -86,18 +88,16 @@ describe('useBlockCommands turn-into conversion', () => {
     }
 
     const editor = ref(createEditor(node, calls) as any)
-    const slashRange = ref(null)
-    const slashMenuSource = ref('turn-into' as const)
-    const menuTargetBlockPos = ref(5)
 
-    const { executeMenuCommand } = useBlockCommands({
-      editor,
-      slashRange,
-      slashMenuSource,
-      menuTargetBlockPos,
-    })
+    const { executeMenuCommand } = useBlockCommands({ editor })
 
-    executeMenuCommand('table')
+    const context: MenuCommandContext = {
+      source: 'turn-into',
+      slashRange: null,
+      targetBlockPos: 5,
+    }
+
+    executeMenuCommand('table', context)
 
     const insertCall = calls.find(([name]) => name === 'insertContentAt')
     expect(insertCall).toBeDefined()
@@ -128,18 +128,16 @@ describe('useBlockCommands turn-into conversion', () => {
     }
 
     const editor = ref(createEditor(node, calls) as any)
-    const slashRange = ref(null)
-    const slashMenuSource = ref('turn-into' as const)
-    const menuTargetBlockPos = ref(7)
 
-    const { executeMenuCommand } = useBlockCommands({
-      editor,
-      slashRange,
-      slashMenuSource,
-      menuTargetBlockPos,
-    })
+    const { executeMenuCommand } = useBlockCommands({ editor })
 
-    executeMenuCommand('paragraph')
+    const context: MenuCommandContext = {
+      source: 'turn-into',
+      slashRange: null,
+      targetBlockPos: 7,
+    }
+
+    executeMenuCommand('paragraph', context)
 
     const insertCall = calls.find(([name]) => name === 'insertContentAt')
     expect(insertCall).toBeDefined()
@@ -195,18 +193,16 @@ describe('useBlockCommands turn-into conversion', () => {
     }
 
     const editor = ref(createEditor(node, calls) as any)
-    const slashRange = ref(null)
-    const slashMenuSource = ref('turn-into' as const)
-    const menuTargetBlockPos = ref(8)
 
-    const { executeMenuCommand } = useBlockCommands({
-      editor,
-      slashRange,
-      slashMenuSource,
-      menuTargetBlockPos,
-    })
+    const { executeMenuCommand } = useBlockCommands({ editor })
 
-    executeMenuCommand('table')
+    const context: MenuCommandContext = {
+      source: 'turn-into',
+      slashRange: null,
+      targetBlockPos: 8,
+    }
+
+    executeMenuCommand('table', context)
 
     const insertCall = calls.find(([name]) => name === 'insertContentAt')
     expect(insertCall).toBeDefined()
@@ -227,18 +223,16 @@ describe('useBlockCommands delete command', () => {
     }
 
     const editor = ref(createEditor(node, calls) as any)
-    const slashRange = ref(null)
-    const slashMenuSource = ref('insert' as const)
-    const menuTargetBlockPos = ref(12)
 
-    const { executeMenuCommand } = useBlockCommands({
-      editor,
-      slashRange,
-      slashMenuSource,
-      menuTargetBlockPos,
-    })
+    const { executeMenuCommand } = useBlockCommands({ editor })
 
-    executeMenuCommand('delete-block')
+    const context: MenuCommandContext = {
+      source: 'insert',
+      slashRange: null,
+      targetBlockPos: 12,
+    }
+
+    executeMenuCommand('delete-block', context)
 
     const deleteCall = calls.find(([name]) => name === 'deleteRange')
     expect(deleteCall).toBeDefined()
@@ -256,18 +250,16 @@ describe('useBlockCommands list commands', () => {
     }
 
     const editor = ref(createEditor(node, calls) as any)
-    const slashRange = ref({ from: 3, to: 5 })
-    const slashMenuSource = ref('slash' as const)
-    const menuTargetBlockPos = ref(null)
 
-    const { executeMenuCommand } = useBlockCommands({
-      editor,
-      slashRange,
-      slashMenuSource,
-      menuTargetBlockPos,
-    })
+    const { executeMenuCommand } = useBlockCommands({ editor })
 
-    executeMenuCommand('bullet-list')
+    const context: MenuCommandContext = {
+      source: 'slash',
+      slashRange: { from: 3, to: 5 },
+      targetBlockPos: null,
+    }
+
+    executeMenuCommand('bullet-list', context)
 
     expect(calls).toContainEqual(['deleteRange', { from: 3, to: 5 }])
     expect(calls).toContainEqual(['toggleBulletList'])
@@ -282,18 +274,16 @@ describe('useBlockCommands list commands', () => {
     }
 
     const editor = ref(createEditor(node, calls) as any)
-    const slashRange = ref(null)
-    const slashMenuSource = ref('insert' as const)
-    const menuTargetBlockPos = ref(12)
 
-    const { executeMenuCommand } = useBlockCommands({
-      editor,
-      slashRange,
-      slashMenuSource,
-      menuTargetBlockPos,
-    })
+    const { executeMenuCommand } = useBlockCommands({ editor })
 
-    executeMenuCommand('numbered-list')
+    const context: MenuCommandContext = {
+      source: 'insert',
+      slashRange: null,
+      targetBlockPos: 12,
+    }
+
+    executeMenuCommand('numbered-list', context)
 
     const insertCall = calls.find(([name]) => name === 'insertContentAt')
     expect(insertCall).toBeDefined()
@@ -333,18 +323,16 @@ describe('useBlockCommands list commands', () => {
     }
 
     const editor = ref(createEditor(node, calls) as any)
-    const slashRange = ref(null)
-    const slashMenuSource = ref('turn-into' as const)
-    const menuTargetBlockPos = ref(7)
 
-    const { executeMenuCommand } = useBlockCommands({
-      editor,
-      slashRange,
-      slashMenuSource,
-      menuTargetBlockPos,
-    })
+    const { executeMenuCommand } = useBlockCommands({ editor })
 
-    executeMenuCommand('bullet-list')
+    const context: MenuCommandContext = {
+      source: 'turn-into',
+      slashRange: null,
+      targetBlockPos: 7,
+    }
+
+    executeMenuCommand('bullet-list', context)
 
     const insertCall = calls.find(([name]) => name === 'insertContentAt')
     expect(insertCall).toBeDefined()

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-
-import { DragHandle } from '@tiptap/extension-drag-handle-vue-3'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Table } from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
@@ -12,11 +9,9 @@ import StarterKit from '@tiptap/starter-kit'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import BlockHandleButtons from '@/components/block-editor/BlockHandleButtons.vue'
 import { createTableNodeContent, parseMarkdownTable } from '@/components/block-editor/composables/markdownTableParser'
-import { isMenuCommand, useBlockCommands } from '@/components/block-editor/composables/useBlockCommands'
-import { useSlashMenu } from '@/components/block-editor/composables/useSlashMenu'
 import { useTableEdgeControls } from '@/components/block-editor/composables/useTableEdgeControls'
+import DragHandleMenu from '@/components/block-editor/DragHandleMenu.vue'
 import { ActiveTableCell } from '@/components/block-editor/extensions/activeTableCell'
 import FormatingMenu from '@/components/block-editor/FormatingMenu.vue'
 import SlashMenu from '@/components/block-editor/SlashMenu.vue'
@@ -31,36 +26,15 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
 }>()
 
-const hoveredBlockPos = ref<number | null>(null)
 const blockEditorElement = ref<HTMLElement | null>(null)
+const slashMenuRef = ref<InstanceType<typeof SlashMenu> | null>(null)
+const dragHandleMenuRef = ref<InstanceType<typeof DragHandleMenu> | null>(null)
 const formatingMenuRef = ref<InstanceType<typeof FormatingMenu> | null>(null)
 const selectionTick = ref(0)
 const isMouseDownInEditor = ref(false)
 const shouldOpenTableMenuOnMouseUp = ref(false)
-const isDragging = ref(false)
 
-const {
-  slashMenuOpen,
-  slashMenuAnchorStyle,
-  slashRange,
-  slashMenuHighlightedValue,
-  slashMenuSource,
-  menuTargetBlockPos,
-  isTableMenuVisible,
-  isTableActionsEnabled,
-  canDeleteTableRow,
-  canDeleteTableColumn,
-  syncMenuState,
-  syncSlashMenu,
-  onSlashMenuOpenChange,
-  onSlashMenuHighlightedValueChange,
-  getMenuLabel,
-  openMenuFromHandle,
-  openMenuFromTrigger,
-  closeMenu,
-} = useSlashMenu({
-  hoveredBlockPos,
-})
+const isDragging = computed(() => dragHandleMenuRef.value?.isDragging ?? false)
 
 const editor = useEditor({
   content: props.modelValue,
@@ -90,15 +64,6 @@ const editor = useEditor({
   },
   onUpdate: ({ editor: coreEditor }) => {
     emit('update:modelValue', coreEditor.getHTML())
-
-    const currentEditor = editor.value
-    if (!currentEditor) {
-      return
-    }
-
-    syncMenuState(currentEditor)
-    syncSlashMenu(currentEditor)
-
     selectionTick.value += 1
   },
   onSelectionUpdate: () => {
@@ -106,10 +71,7 @@ const editor = useEditor({
     if (!currentEditor)
       return
 
-    syncMenuState(currentEditor)
-    syncSlashMenu(currentEditor)
-    queueOrOpenSlashMenuForTableSelection(currentEditor)
-
+    queueOrOpenMenuForTableSelection(currentEditor)
     selectionTick.value += 1
   },
   onTransaction: ({ transaction }) => {
@@ -123,19 +85,13 @@ const editor = useEditor({
     }
   },
   onCreate: () => {
-    const currentEditor = editor.value
-    if (!currentEditor)
-      return
-
-    syncMenuState(currentEditor)
-    syncSlashMenu(currentEditor)
-
     selectionTick.value += 1
   },
 })
 
 const isAnyMenuOpen = computed(() => {
-  return slashMenuOpen.value
+  return (slashMenuRef.value?.isOpen ?? false)
+    || (dragHandleMenuRef.value?.isMenuOpen ?? false)
     || (formatingMenuRef.value?.shouldShowBubbleMenu ?? false)
 })
 
@@ -149,18 +105,23 @@ function isTableRowOrColumnSelection(currentEditor: NonNullable<typeof editor.va
   return selection.isRowSelection() || selection.isColSelection()
 }
 
-function maybeOpenSlashMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
-  if (!isTableRowOrColumnSelection(currentEditor) || slashMenuOpen.value) {
+function isAnyDropdownMenuOpen() {
+  return (slashMenuRef.value?.isOpen ?? false)
+    || (dragHandleMenuRef.value?.isMenuOpen ?? false)
+}
+
+function maybeOpenMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
+  if (!isTableRowOrColumnSelection(currentEditor) || isAnyDropdownMenuOpen()) {
     return
   }
 
-  openMenuFromHandle(currentEditor, 'turn-into')
+  dragHandleMenuRef.value?.openMenuForTableSelection()
 }
 
-function queueOrOpenSlashMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
+function queueOrOpenMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
   const isRowOrColumnSelection = isTableRowOrColumnSelection(currentEditor)
 
-  if (!isRowOrColumnSelection || slashMenuOpen.value) {
+  if (!isRowOrColumnSelection || isAnyDropdownMenuOpen()) {
     shouldOpenTableMenuOnMouseUp.value = false
 
     return
@@ -172,7 +133,7 @@ function queueOrOpenSlashMenuForTableSelection(currentEditor: NonNullable<typeof
     return
   }
 
-  maybeOpenSlashMenuForTableSelection(currentEditor)
+  maybeOpenMenuForTableSelection(currentEditor)
 }
 
 function onBlockEditorMouseDown() {
@@ -193,7 +154,7 @@ function onGlobalMouseUp() {
     return
   }
 
-  maybeOpenSlashMenuForTableSelection(currentEditor)
+  maybeOpenMenuForTableSelection(currentEditor)
 }
 
 function onEditorPaste(event: ClipboardEvent) {
@@ -293,80 +254,8 @@ const {
   isMenuOpen: isAnyMenuOpen,
 })
 
-const { executeMenuCommand } = useBlockCommands({
-  editor,
-  slashRange,
-  slashMenuSource,
-  menuTargetBlockPos,
-})
-
-function onNodeChange(data: { node: ProseMirrorNode | null, pos: number }) {
-  hoveredBlockPos.value = data?.node ? data.pos : null
-}
-
-function onElementDragStart() {
-  isDragging.value = true
-}
-
-function onElementDragEnd() {
-  isDragging.value = false
-
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return
-  }
-
-  requestAnimationFrame(() => {
-    currentEditor.commands.focus()
-    const { from } = currentEditor.state.selection
-    currentEditor.commands.setTextSelection(from)
-  })
-}
-
-function onSlashMenuSelect(details: { value: string }) {
-  if (!isMenuCommand(details.value)) {
-    return
-  }
-
-  executeMenuCommand(details.value)
-  closeMenu()
-}
-
-function onSlashMenuOpenChangeWithFocus(open: boolean) {
-  const currentEditor = editor.value
-  const range = slashRange.value
-
-  onSlashMenuOpenChange(open)
-
-  if (open || !currentEditor) {
-    return
-  }
-
-  requestAnimationFrame(() => {
-    currentEditor.commands.focus()
-
-    if (range) {
-      currentEditor.commands.setTextSelection(range.to)
-    }
-  })
-}
-
-function onDragHandleClick(event: MouseEvent) {
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return
-  }
-
-  openMenuFromTrigger(currentEditor, event, 'turn-into')
-}
-
-function onAddHandleClick(event: MouseEvent) {
-  const currentEditor = editor.value
-  if (!currentEditor) {
-    return
-  }
-
-  openMenuFromTrigger(currentEditor, event, 'insert')
+function onDragHandleMenuOpen() {
+  slashMenuRef.value?.close()
 }
 
 watch(
@@ -411,34 +300,16 @@ onMounted(() => {
       :is-dragging="isDragging"
     />
     <SlashMenu
-      :open="slashMenuOpen"
-      :highlighted-value="slashMenuHighlightedValue"
-      :anchor-style="slashMenuAnchorStyle"
-      :menu-source="slashMenuSource"
-      :is-table-menu-visible="isTableMenuVisible"
-      :is-table-actions-enabled="isTableActionsEnabled"
-      :can-delete-table-row="canDeleteTableRow"
-      :can-delete-table-column="canDeleteTableColumn"
-      :menu-label="getMenuLabel()"
-      @update:open="onSlashMenuOpenChangeWithFocus"
-      @update:highlighted-value="onSlashMenuHighlightedValueChange"
-      @select="onSlashMenuSelect"
-    />
-
-    <DragHandle
       v-if="editor"
+      ref="slashMenuRef"
       :editor="editor"
-      class="z-20 flex -translate-x-[0.35rem] gap-(--handle-gap)"
-      :compute-position-config="{ placement: 'left-start', middleware: [] }"
-      :on-element-drag-start="onElementDragStart"
-      :on-element-drag-end="onElementDragEnd"
-      :on-node-change="onNodeChange"
-    >
-      <BlockHandleButtons
-        @add="onAddHandleClick"
-        @drag="onDragHandleClick"
-      />
-    </DragHandle>
+    />
+    <DragHandleMenu
+      v-if="editor"
+      ref="dragHandleMenuRef"
+      :editor="editor"
+      @menu-open="onDragHandleMenuOpen"
+    />
     <TableEdgeControls
       :show-add-column-button="showAddColumnButton"
       :show-add-row-button="showAddRowButton"
