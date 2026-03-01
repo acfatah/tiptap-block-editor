@@ -131,6 +131,8 @@ defineExpose({
   <DropdownMenuRoot
     :open="menuOpen"
     :highlighted-value="highlightedValue ?? undefined"
+    align="start"
+    side="left"
     @update:open="onOpenChange"
     @update:highlighted-value="onHighlightedValueChange"
     @select="onSelect"
@@ -145,7 +147,10 @@ defineExpose({
     </DropdownMenuTrigger>
 
     <DropdownMenuContent
-      class="w-44"
+      class="
+        w-44
+        data-[placement^=left]:-mr-8
+      "
     >
       <DropdownMenuGroup>
         <DropdownMenuLabel>{{ getMenuLabel() }}</DropdownMenuLabel>
