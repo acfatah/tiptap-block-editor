@@ -138,7 +138,6 @@ defineExpose({
     <DropdownMenuTrigger as-child>
       <button
         type="button"
-        aria-hidden="true"
         tabindex="-1"
         class="pointer-events-none fixed z-30 size-px opacity-0"
         :style="menuAnchorStyle"
