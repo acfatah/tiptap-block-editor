@@ -14,7 +14,6 @@ import { toRef } from 'vue'
 import BlockHandleButtons from '@/components/block-editor/BlockHandleButtons.vue'
 import { isMenuCommand, useBlockCommands } from '@/components/block-editor/composables/useBlockCommands'
 import { useDragHandleMenu } from '@/components/block-editor/composables/useDragHandleMenu'
-import TableActionsMenu from '@/components/block-editor/TableActionsMenu.vue'
 import {
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -44,11 +43,7 @@ const {
   hoveredBlockPos,
   isDragging,
   isTableContext,
-  isTableActionsEnabled,
-  canDeleteTableRow,
-  canDeleteTableColumn,
   openMenuFromTrigger,
-  openMenuFromHandle,
   onMenuOpenChange,
   onHighlightedValueChange,
   closeMenu,
@@ -100,16 +95,10 @@ function onDragEnd() {
   onElementDragEnd(props.editor)
 }
 
-function openMenuForTableSelection() {
-  openMenuFromHandle(props.editor, 'turn-into')
-  emit('menuOpen')
-}
-
 defineExpose({
   isMenuOpen: menuOpen,
   isDragging,
   hoveredBlockPos,
-  openMenuForTableSelection,
 })
 </script>
 
@@ -186,11 +175,6 @@ defineExpose({
         </DropdownMenuItem>
       </DropdownMenuGroup>
 
-      <TableActionsMenu
-        :is-enabled="isTableActionsEnabled"
-        :can-delete-row="canDeleteTableRow"
-        :can-delete-column="canDeleteTableColumn"
-      />
     </DropdownMenuContent>
   </DropdownMenuRoot>
 </template>

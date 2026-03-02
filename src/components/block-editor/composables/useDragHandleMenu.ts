@@ -1,7 +1,6 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { Editor } from '@tiptap/vue-3'
 
-import { CellSelection, isInTable } from '@tiptap/pm/tables'
 import { computed, ref } from 'vue'
 
 export type DragHandleMenuSource = 'insert' | 'turn-into'
@@ -15,9 +14,6 @@ export function useDragHandleMenu() {
   const hoveredBlockPos = ref<number | null>(null)
   const isDragging = ref(false)
   const isTableContext = ref(false)
-  const isTableActionsEnabled = ref(false)
-  const canDeleteTableRow = ref(true)
-  const canDeleteTableColumn = ref(true)
   const firstMenuItem = 'paragraph'
 
   const menuAnchorStyle = computed(() => ({
@@ -59,56 +55,6 @@ export function useDragHandleMenu() {
     return false
   }
 
-  function resolveMenuAnchorPosition(currentEditor: Editor, targetPos: number | null) {
-    const targetNode = targetPos === null
-      ? null
-      : currentEditor.view.nodeDOM(targetPos)
-
-    if (targetNode instanceof HTMLElement) {
-      const rect = targetNode.getBoundingClientRect()
-
-      return {
-        x: rect.left,
-        y: rect.top + 24,
-      }
-    }
-
-    const coords = currentEditor.view.coordsAtPos(currentEditor.state.selection.from)
-
-    return {
-      x: coords.left,
-      y: coords.bottom + 6,
-    }
-  }
-
-  function syncDeleteTableActionAvailability(currentEditor: Editor) {
-    const { selection } = currentEditor.state
-
-    if (!(selection instanceof CellSelection)) {
-      canDeleteTableRow.value = true
-      canDeleteTableColumn.value = true
-
-      return
-    }
-
-    if (selection.isRowSelection()) {
-      canDeleteTableRow.value = true
-      canDeleteTableColumn.value = false
-
-      return
-    }
-
-    if (selection.isColSelection()) {
-      canDeleteTableRow.value = false
-      canDeleteTableColumn.value = true
-
-      return
-    }
-
-    canDeleteTableRow.value = true
-    canDeleteTableColumn.value = true
-  }
-
   function closeMenu() {
     menuOpen.value = false
     highlightedValue.value = null
@@ -131,22 +77,6 @@ export function useDragHandleMenu() {
     menuTargetBlockPos.value = targetPos
     menuSource.value = source
     isTableContext.value = isTableContextAtPos(currentEditor, targetPos)
-    isTableActionsEnabled.value = isInTable(currentEditor.state)
-    syncDeleteTableActionAvailability(currentEditor)
-    highlightedValue.value = firstMenuItem
-    menuOpen.value = true
-  }
-
-  function openMenuFromHandle(currentEditor: Editor, source: DragHandleMenuSource) {
-    const targetPos = resolveBlockTargetPos(currentEditor)
-    const position = resolveMenuAnchorPosition(currentEditor, targetPos)
-
-    menuPosition.value = position
-    menuTargetBlockPos.value = targetPos
-    menuSource.value = source
-    isTableContext.value = isTableContextAtPos(currentEditor, targetPos)
-    isTableActionsEnabled.value = isInTable(currentEditor.state)
-    syncDeleteTableActionAvailability(currentEditor)
     highlightedValue.value = firstMenuItem
     menuOpen.value = true
   }
@@ -202,11 +132,7 @@ export function useDragHandleMenu() {
     hoveredBlockPos,
     isDragging,
     isTableContext,
-    isTableActionsEnabled,
-    canDeleteTableRow,
-    canDeleteTableColumn,
     openMenuFromTrigger,
-    openMenuFromHandle,
     onMenuOpenChange,
     onHighlightedValueChange,
     closeMenu,

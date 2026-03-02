@@ -16,6 +16,7 @@ import { ActiveTableCell } from '@/components/block-editor/extensions/activeTabl
 import FormatingMenu from '@/components/block-editor/FormatingMenu.vue'
 import SlashMenu from '@/components/block-editor/SlashMenu.vue'
 import TableEdgeControls from '@/components/block-editor/TableEdgeControls.vue'
+import TableSelectionMenu from '@/components/block-editor/TableSelectionMenu.vue'
 
 const props = defineProps<{
   modelValue: string
@@ -29,6 +30,7 @@ const emit = defineEmits<{
 const blockEditorElement = ref<HTMLElement | null>(null)
 const slashMenuRef = ref<InstanceType<typeof SlashMenu> | null>(null)
 const dragHandleMenuRef = ref<InstanceType<typeof DragHandleMenu> | null>(null)
+const tableSelectionMenuRef = ref<InstanceType<typeof TableSelectionMenu> | null>(null)
 const formatingMenuRef = ref<InstanceType<typeof FormatingMenu> | null>(null)
 const selectionTick = ref(0)
 const isMouseDownInEditor = ref(false)
@@ -92,6 +94,7 @@ const editor = useEditor({
 const isAnyMenuOpen = computed(() => {
   return (slashMenuRef.value?.isOpen ?? false)
     || (dragHandleMenuRef.value?.isMenuOpen ?? false)
+    || (tableSelectionMenuRef.value?.isMenuOpen ?? false)
     || (formatingMenuRef.value?.shouldShowBubbleMenu ?? false)
 })
 
@@ -108,6 +111,7 @@ function isTableRowOrColumnSelection(currentEditor: NonNullable<typeof editor.va
 function isAnyDropdownMenuOpen() {
   return (slashMenuRef.value?.isOpen ?? false)
     || (dragHandleMenuRef.value?.isMenuOpen ?? false)
+    || (tableSelectionMenuRef.value?.isMenuOpen ?? false)
 }
 
 function maybeOpenMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
@@ -115,7 +119,7 @@ function maybeOpenMenuForTableSelection(currentEditor: NonNullable<typeof editor
     return
   }
 
-  dragHandleMenuRef.value?.openMenuForTableSelection()
+  tableSelectionMenuRef.value?.openMenuForTableSelection()
 }
 
 function queueOrOpenMenuForTableSelection(currentEditor: NonNullable<typeof editor.value>) {
@@ -309,6 +313,11 @@ onMounted(() => {
       ref="dragHandleMenuRef"
       :editor="editor"
       @menu-open="onDragHandleMenuOpen"
+    />
+    <TableSelectionMenu
+      v-if="editor"
+      ref="tableSelectionMenuRef"
+      :editor="editor"
     />
     <TableEdgeControls
       :show-add-column-button="showAddColumnButton"
