@@ -35,8 +35,13 @@ const formatingMenuRef = ref<InstanceType<typeof FormatingMenu> | null>(null)
 const selectionTick = ref(0)
 const isMouseDownInEditor = ref(false)
 const shouldOpenTableMenuOnMouseUp = ref(false)
+const refreshEdgeButtonPositionsRef = ref<() => void>(() => {})
 
 const isDragging = computed(() => dragHandleMenuRef.value?.isDragging ?? false)
+
+function refreshTableEdgeButtons() {
+  refreshEdgeButtonPositionsRef.value()
+}
 
 const editor = useEditor({
   content: props.modelValue,
@@ -67,6 +72,7 @@ const editor = useEditor({
   onUpdate: ({ editor: coreEditor }) => {
     emit('update:modelValue', coreEditor.getHTML())
     selectionTick.value += 1
+    refreshTableEdgeButtons()
   },
   onSelectionUpdate: () => {
     const currentEditor = editor.value
@@ -249,6 +255,7 @@ const {
   addColumnRailStyle,
   addRowRailStyle,
   onBlockEditorMouseMove,
+  refreshEdgeButtonPositions: refreshEdgeButtonPositionsFromControls,
   resetTableEdgeButtons,
   onAddColumnFromEdge,
   onAddRowFromEdge,
@@ -257,6 +264,8 @@ const {
   container: blockEditorElement,
   isMenuOpen: isAnyMenuOpen,
 })
+
+refreshEdgeButtonPositionsRef.value = refreshEdgeButtonPositionsFromControls
 
 function onDragHandleMenuOpen() {
   slashMenuRef.value?.close()

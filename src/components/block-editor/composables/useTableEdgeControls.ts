@@ -214,6 +214,28 @@ export function useTableEdgeControls({ editor, container, isMenuOpen }: UseTable
     showAddRowButton.value = true
   }
 
+  function refreshEdgeButtonPositions() {
+    if (!showAddColumnButton.value && !showAddRowButton.value) {
+      return
+    }
+
+    const tableElement = lastTableCellElement.value?.closest('table') as HTMLTableElement | null
+    const containerElement = container.value
+
+    if (!tableElement || !containerElement) {
+      return
+    }
+
+    const tableRect = tableElement.getBoundingClientRect()
+    const containerRect = containerElement.getBoundingClientRect()
+    const tableEdgeStyles = buildTableEdgeStyles(tableRect, containerRect)
+
+    addColumnButtonStyle.value = tableEdgeStyles.addColumnButtonStyle
+    addRowButtonStyle.value = tableEdgeStyles.addRowButtonStyle
+    addColumnRailStyle.value = tableEdgeStyles.addColumnRailStyle
+    addRowRailStyle.value = tableEdgeStyles.addRowRailStyle
+  }
+
   function onBlockEditorMouseMove(event: MouseEvent) {
     if (isMenuOpen.value) {
       resetTableEdgeButtons()
@@ -270,6 +292,7 @@ export function useTableEdgeControls({ editor, container, isMenuOpen }: UseTable
     addColumnRailStyle,
     addRowRailStyle,
     onBlockEditorMouseMove,
+    refreshEdgeButtonPositions,
     resetTableEdgeButtons,
     onAddColumnFromEdge,
     onAddRowFromEdge,
