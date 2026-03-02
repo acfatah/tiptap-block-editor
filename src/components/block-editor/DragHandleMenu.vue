@@ -105,7 +105,9 @@ defineExpose({
 <template>
   <DragHandle
     :editor="props.editor"
-    class="z-20 flex -translate-x-[0.35rem] gap-(--handle-gap)"
+    class="
+      z-20 flex -translate-x-[0.35rem] gap-(--handle-gap) transition-[top] duration-150 ease-out
+    "
     :compute-position-config="{ placement: 'left-start', middleware: [] }"
     :on-element-drag-start="onElementDragStart"
     :on-element-drag-end="onDragEnd"
@@ -174,7 +176,6 @@ defineExpose({
           Remove
         </DropdownMenuItem>
       </DropdownMenuGroup>
-
     </DropdownMenuContent>
   </DropdownMenuRoot>
 </template>
